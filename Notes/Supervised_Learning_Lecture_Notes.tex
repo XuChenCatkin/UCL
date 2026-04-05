@@ -1,0 +1,1625 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+% Define theorem environments
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{example}{Example}[section]
+
+\title{COMP0078: Supervised Learning - Lecture Notes}
+\author{Comprehensive Course Notes}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+
+These lecture notes cover the fundamentals and advanced techniques in supervised learning. The course develops both theoretical understanding and practical methods for learning predictive models from labeled data.
+
+\newpage
+
+% PAGE 1 CONTENT
+
+\section{Linear Regression Fundamentals}
+
+\subsection{Mean Squared Error Objective}
+
+The most fundamental supervised learning problem is linear regression, which seeks a linear function to predict continuous outputs. The squared loss between predictions and targets is:
+\[
+L(w) = \|Xw - y\|^2 = 2X^T X w - 2X^T y
+\]
+
+where:
+\begin{itemize}
+    \item $X \in \mathbb{R}^{n \times d}$ is the design matrix (data)
+    \item $w \in \mathbb{R}^d$ is the weight vector
+    \item $y \in \mathbb{R}^n$ is the target vector
+\end{itemize}
+
+\subsection{Excess Risk and Risk Decomposition}
+
+\begin{definition}[Excess Risk]
+The excess risk is the difference between the expected loss of a learned function and the Bayes-optimal risk (the best achievable loss):
+\[
+\mathcal{E}(f_S) - \inf \mathcal{E}(f) = \mathbb{E}_{(x,y) \sim D} [\ell(f_S(x), y)] - \mathbb{E}_{(x,y) \sim D} [\ell(f^*(x), y)]
+\]
+
+Our goal in supervised learning is to minimize excess risk, which goes to zero as $n \to \infty$ (with a sufficiently large sample dataset).
+\end{definition}
+
+\subsection{Bayes Risk and Optimal Estimation}
+
+\begin{definition}[Bayes Estimator]
+The Bayes estimator minimizes the posterior expected loss (pointwise maximizer):
+\[
+f^*(x) = \arg\min_y \mathbb{E}_{y \sim p(y|x)} [\ell(\hat{y}, y)]
+\]
+
+For squared loss $\ell(y, \hat{y}) = (y - \hat{y})^2$, this gives the conditional mean:
+\[
+f^*(x) = \mathbb{E}[Y | X = x] = \text{conditional expectation}
+\]
+
+and with 0-1 loss, the Bayes classifier predicts the mode:
+\[
+f^*(x) = \arg\max_y P(Y = y | X = x)
+\]
+\end{definition}
+
+\subsection{Squared Loss and Conditional Mean}
+
+\begin{definition}[Squared Loss]
+The squared loss for regression is:
+\[
+\ell(x) = \int y \, dP(y|x) = \mathbb{E}[Y|X]
+\]
+
+The 0-1 loss is the mode of $P(y|x)$, giving the most likely class.
+\end{definition}
+
+\subsection{Bias-Variance Decomposition}
+
+A fundamental insight in supervised learning is that the excess risk can be decomposed into bias and variance terms. Let $\overline{f}_S$ denote the averaged model trained on $n$ points.
+
+\begin{proposition}[Bias-Variance Decomposition]
+The excess risk decomposes as:
+\[
+\mathbb{E}_S[(\overline{f}_S(x) - f^*(x))^2] = (f_n(x) - f^*(x))^2 + \mathbb{E}_S[(\overline{f}_S(x) - f_n(x))^2]
+\]
+
+where:
+\begin{itemize}
+    \item \textbf{Bias:} $\mathbb{E}_S[\ell(f_S(x)) - \ell(f^*(x))] = \|f_n - f^*\|_{L^2(\rho_X)}$ — expected distance from the true function (measures how well the function class fits the underlying truth)
+    
+    \item \textbf{Variance:} $\mathbb{E}_S[(\overline{f}_S(x) - f_n(x))^2]$ — variance of model outputs when trained on different sampled datasets (measures sensitivity to the specific training data)
+\end{itemize}
+
+The decomposition shows that when $\overline{f}_n(x) = \mathbb{E}_S[f_S(x)]$ is the averaged model trained on $n$ points, then:
+\[
+\mathbb{E}_S[(\overline{f}_S(x) - f^*(x))^2] = (\overline{f}_n(x) - f^*(x))^2 + \mathbb{E}_S[(\overline{f}_S(x) - \overline{f}_n(x))^2]
+\]
+
+Thus, the total error decomposes as bias plus variance, where:
+\[
+\text{Bias} = \mathbb{E}_S[(\ell(f_S(x)) - \ell(f^*(x)))] = \|f_n - f^*\|_{L^2(\rho_X)}
+\]
+
+\[
+\text{Variance} = \mathbb{E}_S[(\overline{f}_S(x) - \overline{f}_n(x))^2]
+\]
+
+where the second term measures the variance of the output when trained on different randomized data.
+\end{proposition}
+
+\subsection{No Free Lunch Theorem}
+
+\begin{theorem}[No Free Lunch Theorem for Binary Classification]
+Let algorithm $\mathcal{A}$ be a learning algorithm for binary classification. If $n < |X|/2$, then there exists a distribution $\rho$ over $X \times Y$ such that:
+
+\begin{enumerate}
+    \item There exists a Bayes estimator $f_n^* : X \to Y$ (with $\mathbb{E}[\ell(f_n^*(x), y)] = 0$)
+    
+    \item For any model $A(S) = f_S$ trained on a dataset $S$ of $n$ independent samples:
+    \[
+    \mathbb{P}_S(P_{\rho,y}[\mathcal{A}(x), f_S(x) \neq y] > \frac{1}{2}) > \frac{1}{4}
+    \]
+\end{enumerate}
+
+On at least 1 in 7 random training sets, the algorithm's test error is $> 12.5\%$ regardless of $n$. 
+
+If one doesn't make assumptions on labels of points, the learner has no better than random guessing.
+\end{theorem}
+
+\subsection{Linear Regression on Feature-Mapped Variables}
+
+\begin{definition}[Feature-Mapped Linear Regression]
+We can extend linear regression by mapping features to a higher-dimensional space:
+
+\begin{align*}
+\text{Primal solution:} \quad \hat{w} &= (\Phi^T \Phi)^{-1} \Phi^T y \quad \text{— cost } O(D^3 + nD^2)\\
+\text{Dual solution:} \quad \hat{w} &= \Phi^T (\Phi \Phi^T)^{-1} y \quad \text{— cost } O(n^3 + Dn^2)
+\end{align*}
+
+where $\Phi \in \mathbb{R}^{n \times D}$ is the feature-mapped data matrix with feature dimension $D$.
+\end{definition}
+
+\subsection{Weak Inverse (Pseudoinverse)}
+
+\begin{definition}[Pseudoinverse]
+The pseudoinverse of $\Phi \in \mathbb{R}^{n \times D}$ is a matrix $\Phi^\dagger \in \mathbb{R}^{D \times n}$ such that:
+\[
+\Phi \Phi^\dagger \Phi = \Phi \quad \text{and} \quad \Phi^\dagger \Phi \Phi^\dagger = \Phi^\dagger
+\]
+\end{definition}
+
+\subsection{Kernel Functions and Positive Semi-Definite (PSD) Property}
+
+\begin{definition}[Kernel Function]
+A kernel function $k$ is an inner product $\Rightarrow k$ is PSD (positive semi-definite with $k \succeq 0$).
+
+However, the converse $k \succeq 0 \Rightarrow k$ is a kernel (inner product) is not generally true. We need to have $k \succeq 0$ for any finite set on $X$ (Moore-Aronszajn theorem).
+\end{definition}
+
+\subsection{Instability of Pseudoinverse on Small Principal Directions}
+
+\begin{remark}[Pseudoinverse Instability]
+Let $\Phi = U \Sigma V^T$ with rank $r \leq n$ and smallest singular value $\sigma_r = 10^{-8}$. Then:
+\[
+\hat{w} = V\Sigma^+ U^T y = V\Sigma^{-1} U^T y
+\]
+
+Let $x = U_n$ be the $n$-th column of $V$. Let $x' = (I+H)x$ and see:
+\[
+\|\hat{f}(x()) - \ell(x')\| = |\hat{w}^T x - w^T c(+z)x| = |z| \left|\frac{U_n^T \Sigma^+ U^T y}{\sigma_p}\right| = 10^8 z \left|\langle w, u_z\right|\right|
+\]
+
+(Indicates small weights)
+\end{remark}
+
+\newpage
+
+% PAGE 2 CONTENT
+
+\section{Regularization and Projections}
+
+\subsection{Ridge Regression}
+
+\begin{definition}[Ridge Regression with Regularization]
+Ridge regression adds an $\ell_2$ penalty to prevent overfitting:
+\[
+\hat{w}_\lambda = \arg\min_w \frac{1}{n} \sum_{i=1}^n (\ell(f(x_i)) - y_i)^2 + \lambda \|w\|^2 \quad \text{(make } w \text{ not too large)}
+\]
+
+The solution is:
+\[
+\hat{w}_\lambda = V\Sigma^+ U^T y = (\Sigma^\Sigma + \lambda I)^{-1} \Sigma^T y
+\]
+
+The smallest singular value is always larger than:
+\begin{itemize}
+    \item Since eigenvalues of $\Sigma^T\Sigma$ are $\{\mu_i + \lambda\}$ 
+    \item And $\Sigma^T\Sigma + \lambda I$ has eigenvalues $\sigma_i^2 + \lambda$
+    \item So $(\Sigma^\Sigma + \lambda I)^{-1}$ has $\frac{\sigma_i^2}{\sigma_i^2 + \lambda} \ll \frac{1}{\sigma_i}$
+\end{itemize}
+\end{definition}
+
+\subsection{Eigenvalue Perturbation}
+
+\begin{definition}[Eigenvalue Perturbation]
+If $A + \lambda I$ has eigenvalues of $\mu_i + \lambda$, where $\mu_i$ is the eigenvalue of $A$.
+\end{definition}
+
+\subsection{Orthogonal Projectors}
+
+\begin{definition}[Orthogonal Projector]
+A matrix $P \in \mathbb{R}^{n \times n}$ is an orthogonal projector if:
+\[
+P^2 = P \quad \text{and} \quad P = P^T
+\]
+\end{definition}
+
+\begin{definition}[Complementary Projector]
+Given an orthogonal projector $P \in \mathbb{R}^{m \times n}$, the associated complementary projector is $I - P$.
+\end{definition}
+
+\begin{remark}[Orthogonality Condition]
+For complementary projectors:
+\[
+(I - P)^T \ell(Pw) = 0 \quad \forall w \in \mathbb{R}^d
+\]
+\end{remark}
+
+\begin{definition}[Decomposition via Projectors]
+Any vector can be decomposed as:
+\[
+x = Px + (I-P)x
+\]
+where:
+\begin{itemize}
+    \item $Px \in V$ — the component in the subspace
+    \item $(I-P)x \in V^\perp$ — the component in the orthogonal complement
+\end{itemize}
+\end{definition}
+
+\subsection{Projection onto Column Space}
+
+\begin{definition}[Orthogonal Projection onto Column Space]
+Given a matrix $V \in \mathbb{R}^{n \times k}$ with orthonormal columns:
+\[
+P = VV^T \quad \text{is the orthogonal projector onto its column space}
+\]
+\end{definition}
+
+\subsection{Projection onto Hyperplanes}
+
+\begin{definition}[Projection onto Hyperplane]
+The projection matrix onto the hyperplane $w^T x + b = 0$ is:
+\[
+P = I - \frac{ww^T}{\|w\|^2}
+\]
+
+To find the closest point $x$ on the hyperplane $w,b$: if $x^*|$, $w^T x^* + b = 0$ is a given point $z$:
+\[
+P_z(w,b) = \min_{x \in \mathbb{R}^d} \|z - x\|^2 \quad \text{subject to } wx + b = 0
+\]
+
+With $w^T x + b = 0 \Rightarrow w^T(x + \frac{w0}{||w||^2}) = 0$, so we can express:
+\[
+x^* = \frac{w0}{||w||^2} = P v = (I - \frac{ww^T}{||w||^2}) v
+\]
+
+So:
+\[
+\min \|z + \frac{wb}{||w||^2} - Pv\|^2
+\]
+
+The solution is the projection of $\left(z + \frac{wb}{||w||^2}\right)$ onto the subspace $\{Pv : w \in \mathbb{R}^d\}$.
+
+Therefore:
+\[
+P_z(w,b) = \frac{|w^T z + b|}{||w||}
+\]
+\end{definition}
+
+\subsection{Support Vector Machines: Optimal Separating Hyperplane}
+
+\begin{definition}[Margin]
+Define the margin on training point $i$ as:
+\[
+\rho_S(w,b) := \min_{i \in [m]} P_S(w,b), \quad \rho_S(w,b) = \frac{|\mathbb{1} y_i(w^T x_i + b)|}{||w||}
+\]
+
+The canonical hyperplane: we can choose $\|w\|$ such that $\beta(w,b) = \frac{1}{||w||}$, i.e., $\min_i y_i(w^T x_i + b) = 1$.
+
+\textbf{Optimal separating hyperplane:} Maximize the margin:
+\[
+\min_{w, b} \frac{1}{2} |w||w| \quad (\text{or } w \in \mathbb{R}^d)
+\]
+subject to $y_i(w^T x_i + b) \geq 1, \quad i = 1, \ldots, m$.
+
+\textbf{Margin of OSH:}
+\[
+L(w, b) = \frac{1}{2} w^T w - \sum_{i=1}^m \alpha_i [y_i(w^T x_i + b) - 1]
+\]
+
+where the $1/\|w\|$ is the margin of OSH.
+
+\textbf{Optimality conditions:}
+\[
+\frac{\partial L}{\partial b} = -\sum_{i=1}^m y_i \alpha_i = 0, \quad \frac{\partial L}{\partial w} = w - \sum_{i=1}^m \alpha_i y_i x_i = 0 \Rightarrow w = \sum_{i=1}^m \alpha_i y_i x_i
+\]
+
+\textbf{Dual problem:}
+\[
+\max_{\alpha} Q(\alpha) = -\frac{1}{2} \alpha^T A \alpha + \sum_{i \in [m]} \alpha_i
+\]
+where $A := (y_i y_j x_i^T x_j)_{ij}$, and $(\alpha_i x_j y_j) = (\text{osH Ax} = \omega^T \omega)$.
+\end{definition}
+
+\newpage
+
+% PAGE 3 CONTENT
+
+\section{Kernel Methods and Advanced SVM}
+
+\subsection{Dual Problem Formulation}
+
+\begin{remark}[New Dual Problem]
+The dual optimization problem is:
+\[
+Q(\alpha) = -\frac{1}{2} \alpha^T A \alpha + \sum_{i=1}^m \alpha_i
+\]
+subject to $\sum_i y_i \alpha_i = 0$ and $0 \leq \alpha_i \leq C$, for $i = 1, \ldots, m$.
+\end{remark}
+
+\subsection{Hyperparameter Selection}
+
+\begin{remark}[Selection of C via Cross-Validation]
+The parameter $\bar{\alpha}_i$ is a piecewise quadratic function of $C$. The value of $C$ is often selected by minimizing Leave-One-Out (LOO) cross-validation error.
+
+For each $C$, train full data set to identify SVs. For each support vector $x_i$, retrain on $m-1$ points and test on $x_i$. For non-SV, prediction unchanged. By KKT conditions:
+
+Only SV can be misclassified. If one SV is unclassified (from KKT: $c_i \in \text{obj} \Rightarrow y_i(w^T x_i + b) \geq 1$, $\xi_i = 0$) then $y_i(w^T x_i + b) \geq 1$, $\xi_i = 0$ so:
+
+\[
+\text{LOO error} = \frac{\#\text{ misclassified SVs}}{m} \leq \frac{\#\text{SVs}}{m}
+\]
+\end{remark}
+
+\subsection{SVM with Kernel}
+
+\begin{definition}[Kernel SVM]
+SVM with kernel can be formulated as:
+\[
+f(x) = \sum_i y_i \alpha_i k(x_i, x) + b, \quad x \in \mathcal{X} \quad \text{and} \quad A = (y_i y_j k(x_i, x_j))_{ij}
+\]
+
+A new point $x \in \mathcal{X}$ is classified as $\text{sgn}(f(x))$.
+\end{definition}
+
+\begin{definition}[SVM with Kernel Loss]
+The empirical risk with kernel is:
+\[
+E_\lambda(w,b) = \sum_{i=1}^m \max(1 - y_i(\langle w, \phi(x_i) \rangle + b), 0) + \lambda \|w\|^2 \quad \text{with} \quad \lambda = \frac{1}{2C}
+\]
+
+SVM is $\text{CE}_{\frac{1}{2C}}(w,b) := \frac{1}{2}\|w\|^2 + C \sum_{i=1}^m \text{hinge}(y_i, \langle w, \phi(x_i) \rangle + b)$.
+\end{definition}
+
+\subsection{SVM Regression}
+
+\begin{definition}[SVM Regression]
+We can choose loss $|y - f(x)|_\varepsilon = \max(|y - f(x)| - \varepsilon, 0)$ to handle regression:
+
+\[
+\min_{w,b} \frac{1}{2}w^T w + C \sum_{i=1}^m (\xi_i^+ + \xi_i^-)
+\]
+subject to:
+\begin{align*}
+w^T x_i + b - y_i &\leq \varepsilon + \xi_i^+ \\
+y_i - w^T x_i - b &\leq \varepsilon + \xi_i^- \\
+\xi_i^+, \xi_i^- &\geq 0, \quad i = 1, \ldots, m
+\end{align*}
+\end{definition}
+
+\subsection{Scaling and Margin in SVM}
+
+\begin{remark}[SVM Loss Scale Sensitivity]
+SVM loss is scale sensitive (hinge loss $\max(1 - y_i f(x_i), 0)$). If scaling $f(x)$, SV will change. The boundary changes. The penalty $C$ must compensate for any scaling. Recall we normalized the hyperplane such that $\min_i y_i(w^T x_i + b) = 1$. We need to adjust $\|w\|$ based on global data. Here we use $C$ to adjust.
+\end{remark}
+
+\subsection{Large-Scale SVM: Primal vs Dual}
+
+\begin{remark}[Size Considerations]
+If data size $m \gg N$ (feature size) and we cannot use the kernel trick, we should solve the primal problem directly:
+\[
+\min_{w,b} \frac{1}{2}w^T w + C \sum_{i=1}^m \max(1 - y_i(w^T x_i + b), 0) \quad \text{(Single convex objective)}
+\]
+\end{remark}
+
+\section{Logistic Regression and Classification}
+
+\subsection{Logistic Regression for Binary Classification}
+
+\begin{definition}[Logistic Regression]
+Logistic regression models the probability of the positive class:
+\[
+\ell(x) = \log(1 + e^{-f(x)y}) \quad \text{for binary classification}
+\]
+\end{definition}
+
+\subsection{Binary Classification Loss}
+
+\begin{definition}[Binary Classification Losses]
+A binary classification loss measures the relationship between $f(x)$ and sign of $y$ as:
+
+\begin{itemize}
+    \item \textbf{0-1 loss:} $\ell_0(x) = \mathbb{1}[f(x) \neq y]$ — square loss $\ell(x) = (f(x) - y)^2$
+    
+    \item \textbf{Hinge loss:} $\ell(x) = \max(1 - yf(x), 0)$
+    
+    \item \textbf{Logistic loss:} $\ell(x) = \log(1 + \exp(-yf(x)))$
+\end{itemize}
+\end{definition}
+
+\subsection{Logistic Regression Formulation}
+
+\begin{definition}[Logistic Regression Model]
+The logistic regression model:
+\[
+P_\theta(x) = \frac{1}{1 + e^{-w^T f(x)}}
+\]
+\end{definition}
+
+\subsection{Quadratic Upper Bound}
+
+\begin{lemma}[Quadratic Upper Bound]
+Let $F$ be $M$-smooth, with $M > 0$, then for any $z \in \mathbb{R}^d$:
+\[
+F(z) \leq F(w) + \nabla F(w)^T (z - w) + \frac{M}{2} \|z - w\|^2
+\]
+\end{lemma}
+
+\subsection{Gradient Descent}
+
+\begin{definition}[Gradient Descent]
+When $\eta = (\mu_k - \eta) \nabla F(\mu_k)$, with $\eta > 0$.
+\end{definition}
+
+\subsection{M-Smoothness Condition}
+
+\begin{definition}[M-Smoothness]
+A function $F: \mathbb{R}^d \to \mathbb{R}$ is $M$-smooth if it has Lipschitz continuous gradient, with Lipschitz constant $M$:
+\[
+\|\nabla F(w) - \nabla F(z)\| \leq M \|z - w\| \quad \forall w, z \in \mathbb{R}^d
+\]
+\end{definition}
+
+\newpage
+
+% PAGE 4 CONTENT
+
+\section{Convexity, Smoothness, and Optimization Theory}
+
+\subsection{Differentiability and Convexity}
+
+\begin{definition}[Differentiable Convex Function]
+Let $F: \mathbb{R}^d \to \mathbb{R}$ be differentiable. Then $F$ is convex $\Leftrightarrow$ for all $w, z \in \mathbb{R}^d$:
+\[
+F(z) \geq F(w) + \nabla F(w)^T (z - w)
+\]
+\end{definition}
+
+\subsection{Convexity and Smoothness Bounds}
+
+\begin{definition}[Convexity-Smoothness Relationship]
+We have:
+\[
+F(w) + \nabla F(w)^T (z - w) \leq F(z) \leq F(w) + \nabla F(w)^T (z - w) + \frac{M}{2} \|z - w\|^2
+\]
+
+where the left inequality is \textbf{convexity} and the right is \textbf{smoothness}.
+\end{definition}
+
+\subsection{Gradient Descent Convergence}
+
+\begin{theorem}[Gradient Descent Convergence]
+Let $F$ be convex and $M$-smooth. Assume $\mathbb{R}^4$ and $F$ admits a minimum in $w_* \in \mathbb{R}^d$. Let $(w_k)_{k=1}^{\infty}$ be a sequence produced by GD with $\eta = \frac{1}{M}$. Then:
+\[
+F(w_k) - F(w_*) \leq \frac{M}{2\xi} \|w_0 - w_*\|^2 \quad \text{and} \quad F(w_{k+1}) \leq F(w_k) - \frac{1}{2M}\|\nabla F(w_k)\|^2
+\]
+\end{theorem}
+
+\subsection{Square Loss Lipschitz Property}
+
+\begin{definition}[Square Loss]
+The square loss $\ell(w) = (w^T x - y)^2$ has gradient:
+\[
+\nabla \ell(w) = 2(w^T x - y)x, \quad \nabla \ell(w) - \nabla \ell(z) = 2x(x^T)^* (w - z)
+\]
+
+So $\|\nabla \ell(w) - \nabla \ell(z)\|^* \leq 2 \|x\|^2 \|w - z\|$, which means square loss is $2\|x\|^2$ Lipschitz.
+\end{definition}
+
+\subsection{Regularized Regression}
+
+\begin{definition}[Regularized Loss]
+The regularized regression loss is:
+\[
+E_S(w) = \frac{1}{m} \sum_{i} (w^T x_i - y_i)^2 + \lambda \|w\|^2
+\]
+
+Then $\nabla E_S(w) = 2(C_S + \lambda I)w - \frac{m}{n} \sum_i y_i x_i$, where $C_S = \frac{1}{m}\sum_{i=1}^m x_i x_i^T$.
+
+Hence $\|\nabla E_S(w) - \nabla E_S(z)\| \leq 2 \|(C_S + \lambda I)\| \|w - z\|$, where $\|(C_S + \lambda I)\|$ is the operator norm and takes the largest singular value (PCA).
+\end{definition}
+
+\subsection{Subgradients}
+
+\begin{definition}[Subgradient]
+Let $F: \mathbb{R}^d \to \mathbb{R}$ be a differentiable and $M$-Lipschitz function. By the definition of subgradients:
+\[
+\|F(\mathbf w) - \nabla F(\mathbf z)\|^* \leq 2 \|w - z\|
+\]
+
+\textbf{Note:} The set of all subgradients of $F$ in $w$ is the sub-differential and is denoted as $\partial F(w)$.
+\end{definition}
+
+\subsection{Subgradient Concept}
+
+\begin{definition}[Subgradient Method]
+For L-Lipschitz function $F$, let $(w_k)_{k=1}^{\infty}$ be a sequence obtained via subgradient method:
+\[
+F(w_k^{\text{opt}}) - F(w_*) \leq \frac{\|w_0 - w_*\|^2}{2\sum_{k} D_k} + \frac{L^2}{2} \sum_{k} D_k
+\]
+
+If we choose $\eta = \frac{1}{\sqrt{E}}$, then we have:
+\[
+F(w_k^{\text{opt}}) - F(w_*) \leq \frac{1}{2\sqrt{E}} \left(\|w_0 - w_*\| + L^2\right)
+\]
+\end{definition}
+
+\section{Tree-Based Methods}
+
+\subsection{Tree Partition Functions}
+
+\begin{definition}[Tree Partition Function]
+The output of a tree classification is:
+\[
+f(x) = \sum_p c_p \mathbb{1}[x \in \mathcal{R}_p] \quad \text{for each } x, \text{ only 1 } \mathcal{R}_p \text{ is active; all others zero}
+\]
+
+Usually $c_p = \text{avg}(y_i : x_i \in \mathcal{R}_p) = \frac{\sum_{x_i \in \mathcal{R}_p} y_i}{\sum_i \mathbb{1}[x_i \in \mathcal{R}_p]}$
+\end{definition}
+
+\subsection{Regression Trees}
+
+\begin{definition}[Regression Trees]
+Define the pair of axis-parallel half-planes:
+\[
+R_1(j, S) = \{x : x_j \leq S\}, \quad R_2(j, S) = \{x : |x_j > S\}
+\]
+
+Solve the problem:
+\[
+\min_{j,S} \left[\min_{c_1} \sum_{x_i \in R_1(j,S)} (y_i - c_1)^2 + \min_{c_2} \sum_{x_i \in R_2(j,S)} (y_i - c_2)^2\right], \quad j \text{ is feature, } S \text{ is half-plane}
+\]
+
+Inner minimization is solved by using average in each half-plane: $\bar{c}_1 = \text{ave}(y_i : x_i \in R_1(j, S))$, $\bar{c}_2 = \text{ave}(y_i : x_i \in R_2(j, S))$.
+
+Outer minimization can be done by searching with computation $O(\text{nm})$ given a features and $m$ coding points in plane.
+\end{definition}
+
+\subsection{Cost-Complexity Pruning}
+
+\begin{remark}[Cost-Complexity Pruning]
+Grow a large tree $\mathcal{T}$. Look at for a subtree $T_A \subseteq \mathcal{T}$ which minimizes:
+\[
+\text{Ca}(T) = \sum_{p \in T} m_p \varPhi(T) + \lambda |T|, \quad \mathcal{R}_p(T) = \frac{1}{m_p} \sum_{x_i \in \mathcal{R}_p} (y_i - c_p)^2 \quad \text{(tree error)}
+\]
+
+First term increases when pruning, while second term decreases. Every time a pruned tree is chosen, $c_p$ will change!
+\end{remark}
+
+\subsection{Classification Trees}
+
+\begin{definition}[Classification Tree]
+In each region, the empirical class probabilities are $\hat{p}_{pk} = \frac{1}{m_p} \sum_{x_i \in \mathcal{R}_p} \mathbb{1}[y_i = k]$.
+
+We classify an input in region $p$ into the class with maximum probability:
+\[
+f(x) = \arg\max_k \frac{\sum_{x_i: y_i=k} I[x \in \mathcal{R}_p]}{\sum_{x_i} I[x \in \mathcal{R}_p]} \quad \text{(go to region } \mathcal{R}_p \text{ first, then assign it to } \arg\max)
+\]
+\end{definition}
+
+\newpage
+
+% PAGE 5 CONTENT
+
+\section{Ensemble Methods and Boosting}
+
+\subsection{Classification Tree Impurity Measures}
+
+\begin{definition}[Node Impurity Measures]
+In classification trees, we can choose different $\varOp(T)$ of node impurity:
+
+\begin{enumerate}
+    \item \textbf{Misclassification error}: $(1 - P_{p,p(p)})$ where $\mathbb{1}[x_i \in \mathcal{R}_p \neq P_{pkp}$ (In each region, only pick the highest one and rest is misclassified)
+    
+    \item \textbf{Gini index}: $\sum_k P_{pk}(1 - p_k)$
+    
+    \item \textbf{Cross entropy}: $\sum_k P_{pk} \log \frac{1}{P_{pk}} = -\sum_k p_k \log p_k$
+\end{enumerate}
+
+Cross entropy and Gini index are used to grow the tree. They are more sensitive to changes in the node probabilities. They have higher derivative around $0 >> 0.1$ and $0.9 >> 1.0$, encourage selection, but smaller around $0.5$.
+
+Classification error is often used to prune the tree.
+\end{definition}
+
+\subsection{Chernoff Bound}
+
+\begin{definition}[Chernoff Bound]
+Let $X_1, X_2, \ldots, X_n$ be independent random variables. Assume $\delta = \mathbb{1}_{x_i = \gamma}$.
+
+Let $X := \sum X_i$ and $\mu := \mathbb{E}[X] := \sum \mathbb{E}[X_i]$. Then for any $b \in \mathbb{E}_{x,y}$:
+\[
+P(X = k_b) \leq \exp\left(-\frac{(\mu - \delta)^2}{2\mu}\right)
+\]
+\end{definition}
+
+\subsection{Bagging Algorithm}
+
+\begin{definition}[Bagging]
+Bagging reduces the variance of a classifier by training many variants of the classifier and then voting:
+
+\begin{itemize}
+    \item \textbf{Training data}: $S = \{(x_1, y_1), (x_2, y_2), \ldots, (x_m, y_m)\} \subset \mathbb{R}^d \times \{-1, 1\}$
+    
+    \item \textbf{Ensemble size} $T$ (number of classifiers)
+    
+    \item \textbf{Resample size} $M$ (usually $M = m$)
+    
+    \item \textbf{Classifier function} $h_S(x)$
+\end{itemize}
+
+For $t = 1$ to $T$ do:
+\begin{itemize}
+    \item $S(t) := M$ samples with replacement from $S$
+    \item Train $h_S(x)$
+    \item $H(x) = \text{sign}\left(\sum_{l=1}^T h_S(x)\right)$ for regression, we do average
+\end{itemize}
+
+The probability that a particular example does not appear in bag $S(t)$ is $(1 - \frac{1}{m})^m$, which is roughly $0.368$. So $63\%$ distinct examples in each $S(t)$.
+\end{definition}
+
+\subsection{Random Forests}
+
+\begin{definition}[Random Forests]
+Build a tree for each split only check a subset of size $k$ features.
+
+$k$ usually $\sqrt{n}$ or $\log n$. Feature means $x_j$ in $\{x_1, \ldots, x_d\}$.
+\end{definition}
+
+\subsection{Boosting Algorithm}
+
+\begin{definition}[Boosting]
+Boosting is a weak learner slightly better than random guessing:
+
+\begin{itemize}
+    \item \textbf{Weak learner}: slightly better than random guessing
+    \item \textbf{Concentrate on hardest examples}
+    \item \textbf{Weighted majority}
+\end{itemize}
+\end{definition}
+
+\subsection{Adaboost}
+
+\begin{definition}[Adaboost]
+Training data $S = \{(x_1, y_1), \ldots, (x_m, y_m)\}$. Initialize $D_1(i) = \cdots = D_1(m) = \frac{1}{m}$.
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+$t$ & 1, 2, 3, \ldots, T \quad \text{(time)} \\
+\hline
+$i$ & $\frac{1}{m}$ \\
+\hline
+2 & $\frac{1}{m}$ & $D_t(i) = \frac{D_t^t e^{-\alpha_t; h_t(x_i)}}$ & $y_i h_t(x_i) \leq 0$ of misclassified, and $e^{-\alpha_t; h_t(x_i)} > 0$, increase weight \\
+\hline
+\vdots & \vdots & \\
+\hline
+$m$ & $\frac{1}{m}$ & & \\
+\hline
+(data) & \multicolumn{2}{|c|}{$\alpha_t$: weight on weak learner $t$, $\alpha_t = \frac{1}{2} \log \frac{1-\varepsilon_t}{\varepsilon_t}$ ($2\varepsilon_t, h_t : ~ f(x) := \sum \alpha_t h_t(x)$)} \\
+\hline
+& & $h_t$: weak learner generated at time $t$ & $H(x) = \text{sign}(f(x))$ \\
+\hline
+& & $\varepsilon_t$: weighted error of $h_t$ at $t$, $\varepsilon_t = \sum_{i=1}^m D_t(i) \mathbb{1}\left[\frac{h_t(x_i) \neq y_i}{}\right]$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{definition}
+
+\newpage
+
+% PAGE 6 CONTENT
+
+\subsection{Adaboost Training Error Bound}
+
+\begin{theorem}[Adaboost Training Error]
+Given a training set $\{(x_1, y_1), \ldots, (x_m, y_m)\}$ and assume each weak learner in Adaboost has weighted error $2\varepsilon_t \leq 1 - D$. Then training error is at most:
+\[
+\frac{1}{m} \sum_{i=1}^m \mathbb{1}[\mathcal{H}(x_i) \neq y_i] \leq \exp(-2\gamma^2 T) \quad \text{(Training error drops exponentially fast)}
+\]
+\end{theorem}
+
+\subsection{Training Error Analysis}
+
+\begin{theorem}[Adaboost Training Error Decomposition]
+Let the training error be:
+\[
+\frac{1}{m} \sum_{i=1}^m \mathbb{1}[\mathcal{H}(x_i) \neq y_i] \leq \frac{1}{m} \sum_{t=1}^T e^{-y_i f(x_i)} = \sum_{t=1}^T z_t
+\]
+
+Where $f(x_i) = \sum_i \alpha_k h_k(x_i)$. If $\mathcal{H}(x_i) = \text{sign}(f(x_i))$ and $y_i \neq \text{sign}(f(x_i))$, then $-y_i f(x_i) > 0 \Rightarrow e^{-y_i f(x_i)} \geq 1$.
+
+\textbf{Second equality:} $D_t(i) = \frac{D_t(i) e^{-\alpha_t y_i h_t(x_i)}}{z_t}$ where:
+\[
+z_t = \sum_{i=1}^m e^{-y_i f(x_i)}
+\]
+
+Thus $e^{-y_i f(x_i)} = e^{-y_i f(x_i-1)} \cdot e^{-\alpha_t y_i h_t(x_i)} = \prod_{t=1}^T \frac{D_t(i)}{D_t(i)} z_t = \frac{D_T(i)}{\pi_t=1} z_t$.
+
+So $\frac{1}{m} \sum e^{-y_i f(x_i)} = \left(\prod_{p=1} D_p(i)\right) \left(\prod_{t=1}^T z_t\right) = \prod_t z_t$.
+
+To minimize training error, we can minimize $z_t$:
+\[
+\frac{\partial}{\partial z_t} z_t e^{-\alpha_t y_i h_t(x_i)} = e^{\alpha_t \sum D_t(i) + e^{-\alpha_t} \sum D_t(i) = \frac{1}{z_t e^{\alpha_t}}} \sqrt{\frac{(1 - 4\gamma_t^2)}{}}
+\]
+
+Take $\frac{\partial z_t}{\partial \alpha_t} = 0 \Rightarrow \alpha_t = \frac{1}{2} \log \frac{1-\varepsilon_t}{\varepsilon_t}$ and $z_t = 2\sqrt{\varepsilon_t(1-\varepsilon_t)} = \sqrt{1 - 4\gamma_t^2}$ (where $\gamma_t = \frac{1}{2} - 2\varepsilon_t$ ).
+
+So $\frac{1}{m} \sum \mathbb{1}[\mathcal{H}(x_i) \neq y_i] \leq \prod_t z_t = \prod_t \sqrt{1 - 4\gamma_t^2} \leq e^{-2\sum \gamma_t^2}$ (last inequality we use $1 - x \leq e^{-x}$).
+\end{theorem}
+
+\subsection{Boosting as Forward Stagewise Additive Model}
+
+\begin{definition}[Forward Stagewise Additive Model]
+Boosting is a greedy way to solve the problem:
+\[
+\min \left\{\sum_{i=1}^m V(y_i, \sum_t \alpha_t h_t(x_i)) : \alpha_1, \ldots, \alpha_T \in \mathbb{R}^T, h_1, \ldots, h_T \in \mathcal{H}^T\right\}
+\]
+
+At each iteration, $f^{(t)} = \sum_{s=1}^t \alpha_s h_s$ and $(\alpha_t, h_t) = \arg\min_{\alpha, h} \sum_i V(y_i, f^{(t-1)}(x_i) + \alpha h_t(x_i))$.
+
+This is called forward stagewise additive model.
+
+To derive adaboost, we denote $V(y, \hat{y}) = \exp(-y\hat{y})$ and minimize $\sum_i e^{-y_i f^{(t)}(x_i) + \alpha h_t(x_i)}$. We have $\min \sum_i D_t(i) \mathbb{1}[y_i \neq h_t(x_i)]$ (weighted classification error).
+
+So $h_t$ minimizes the weighted classification error $h_t$ minimizes $\sum_i D_t(i) \mathbb{1}[y_i \neq h_t(x_i)]$ (weighted classification error).
+
+$\alpha_t, h_t$ can be minimized separately. $\alpha_t = \frac{1}{2} \log \frac{1-\varepsilon_t}{\varepsilon_t}$, $\varepsilon_t$ is the weighted classification error $h_t$ minimizes.
+
+So exponential loss $\Leftrightarrow$ weighted 0-1 classification error.
+\end{definition}
+
+\subsection{Typical Loss Functions}
+
+\begin{definition}[Classification Loss Functions]
+Common loss functions are $V_{\text{clf}}(y,\hat{y}) = \mathbb{1}[y \neq \text{sign}(\hat{y})]$ (misclassification loss):
+
+\begin{itemize}
+    \item \textbf{Misclassification loss}: $V_{\text{clf}}(y,\hat{y}) = \mathbb{1}[y \neq \text{sign}(\hat{y})]$
+    
+    \item \textbf{Hinge loss}: $V_{\text{hinge}}(y,\hat{y}) = \max(0, 1-y\hat{y})$
+    
+    \item \textbf{Exponential loss}: $V_{\text{exp}}(y,\hat{y}) = \exp(-y\hat{y})$
+    
+    \item \textbf{Square loss}: $V_{\text{sq}}(y,\hat{y}) = (y-\hat{y})^2$
+\end{itemize}
+
+Key properties:
+
+\begin{itemize}
+    \item \textbf{Margin of a predictor}: $\hat{y}$ for $y \in \{-1, 1\}$
+    
+    \item \textbf{Misclassification is not continuous}
+    
+    \item \textbf{Square loss punishes positive margin unnecessarily}
+    
+    \item \textbf{Hinge loss only punishes negative margin but not differentiable everywhere}
+    
+    \item \textbf{Exponential loss punishes negative margin and promotes large positive margins}
+\end{itemize}
+\end{definition}
+
+\subsection{Bagging vs Boosting}
+
+\begin{remark}[Variance vs Bias Reduction]
+Bagging tends to reduce variance. Boosting tends to reduce bias.
+\end{remark}
+
+\newpage
+
+% PAGE 7 CONTENT
+
+\section{Theoretical Foundations: Empirical Risk and Generalization}
+
+This section develops the theoretical framework for understanding when and why empirical risk minimization (ERM) succeeds, establishing key results about generalization bounds and consistency.
+
+\subsection{Empirical Risk and Its Properties}
+
+\begin{definition}[Empirical Risk]
+Consider a loss function $\ell: \mathcal{Z} \times \mathcal{Y} \to \mathbb{R}$. The empirical risk is:
+\[
+\mathcal{E}_n(f) = \frac{1}{n} \sum_{i=1}^n \ell(f(x_i), y_i)
+\]
+which is an unbiased estimator of the true risk $\mathcal{E}(f) := \mathbb{E}_{(x,y) \sim P}[\ell(f(x),y)]$ with variance $V_\ell = \frac{\text{Var}(\ell(f(x),y))}{n}$.
+\end{definition}
+
+\begin{remark}[Variance Bound]
+The variance of the empirical risk estimator satisfies:
+\[
+\mathbb{E}[|\mathcal{E}_n(f) - \mathcal{E}(f)|] \leq \sqrt{\frac{V_\ell}{n}}
+\]
+\end{remark}
+
+\begin{definition}[Chebyshev's Inequality]
+For any random variable $X$ with mean $\mu$ and standard deviation $\sigma$, and any $k > 0$:
+\[
+\mathbb{P}(|X - \mu| > k\sigma) \leq \frac{1}{k^2}
+\]
+This gives the probability that $X$ deviates beyond $k$ standard deviations.
+\end{definition}
+
+\subsection{Excess Risk Decomposition}
+
+\begin{definition}[Excess Risk Decomposition]
+Let $f^*$ be the optimal function on the infinite population and $f_n$ be the empirical risk minimizer over hypothesis class $\mathcal{F}$. The excess risk can be decomposed as:
+\[
+\mathcal{E}(f_n) - \mathcal{E}(f^*) = \underbrace{\mathcal{E}(f^*) - \mathcal{E}(f)}_{\text{approximation error}} + \underbrace{\mathcal{E}(f) - \mathcal{E}_n(f_n)}_{\text{generalization error}} + \underbrace{\mathcal{E}_n(f_n) - \mathcal{E}(f_n)}_{\text{estimation error}}
+\]
+where $f = \arg\min_{f \in \mathcal{F}} \mathcal{E}(f)$ is the best function in the hypothesis class.
+\end{definition}
+
+\begin{definition}[Generalization Error]
+The generalization error measures the gap between empirical and true risk:
+\[
+\text{Generalization Error} = \mathbb{E}[\mathcal{E}(f_n) - \mathcal{E}_n(f_n)]
+\]
+In general $\mathbb{E}[\mathcal{E}_n(f_n) - \mathcal{E}(f_n)] \neq 0$ because both $\mathcal{E}_n$ and $f_n$ depend on the training data. Specifically, for samples $X_i = \ell(f_n(x_i), y_i)$ and $X_j = \ell(f_n(x_j), y_j)$, the terms $X_i$ and $X_j$ are not independent.
+\end{definition}
+
+\begin{definition}[Overfitting]
+An estimator $f_n$ is said to overfit the training data if for all $n \in \mathbb{N}$:
+\[
+\mathbb{E}[\mathcal{E}(f_n) - \mathcal{E}_n(f_n)] > C \quad \text{and} \quad \mathbb{E}[\mathcal{E}(f_n) \text{ decreases}]
+\]
+In other words, $f_n$ performs worse on the true distribution but better on the training sample. This occurs when $f_n$ learns patterns specific to the training data rather than general structure.
+\end{definition}
+
+\subsection{Empirical Risk Minimization on Finite Hypothesis Spaces}
+
+\begin{definition}[ERM on Finite Hypothesis Spaces]
+When both $\mathcal{X}$ and $\mathcal{Y}$ are finite, the hypothesis class $\mathcal{F} = \mathcal{Y}^\mathcal{X} = \{f: \mathcal{X} \to \mathcal{Y} \mid \mathcal{X}, \mathcal{Y} \text{ finite}\}$ is also finite. For the empirical risk minimizer on $\mathcal{F}$:
+\[
+\mathbb{E}[|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)|] = \mathbb{E}\left[\sup_{f \in \mathcal{F}} |\mathcal{E}_n(f) - \mathcal{E}(f)|\right] \leq |\mathcal{F}| \sqrt{\frac{V_f}{n}}
+\]
+where $V_f = \sup_f V_f$ represents the maximum variance over all functions in $\mathcal{F}$.
+\end{definition}
+
+\begin{remark}[ERM Consistency]
+Here ERM works effectively as $\lim_{n \to \infty} \mathbb{E}[|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)|] = 0$.
+
+Since $\mathcal{E}_n(f_n) - \mathcal{E}(f_n) \leq 0$ (because $f_n = \arg\min \mathcal{E}_n(f)$), we have:
+\[
+\mathbb{E}[\mathcal{E}(f_n) - \mathcal{E}(f_n)] \leq \mathbb{E}[\mathcal{E}(f) - \mathcal{E}_n(f)] \leq 2\sup_{f \in \mathcal{F}} |\mathcal{E}_n(f) - \mathcal{E}(f)|
+\]
+\end{remark}
+
+\begin{theorem}[Generalization Bound for Finite Hypothesis Spaces]
+Let $\mathcal{H} \subseteq \mathcal{F}$ be a finite space of hypotheses. Then:
+\[
+\mathbb{E}[|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)|] \leq |\mathcal{H}| \sqrt{\frac{V_f}{n}}
+\]
+In particular, if $f_n \in \mathcal{H}$, then $\mathbb{E}[|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)|] \leq |\mathcal{H}| \sqrt{\frac{V_f}{n}}$.
+
+The expected generalization error vanishes as $n \to \infty$, and the expected excess risk also vanishes. Thus, on finite hypothesis spaces, ERM is consistent.
+\end{theorem}
+
+\subsection{Hoeffding's Inequality and High-Probability Bounds}
+
+\begin{definition}[Hoeffding's Inequality]
+Let $X_1, \ldots, X_n$ be independent random variables with $X_i \in [a_i, b_i]$. Let $\bar{X} = \frac{1}{n}\sum_i X_i$. Then:
+\[
+\mathbb{P}(|\bar{X} - \mathbb{E}[X]| > \varepsilon) \leq 2\exp\left(-\frac{2n^2 \varepsilon^2}{\sum_i (b_i - a_i)^2}\right)
+\]
+\end{definition}
+
+\begin{definition}[Bounded Loss Condition]
+If $|\ell(f(x), y)| \leq M$ by some constant $M > 0$, then for all $f \in \mathcal{H}$:
+\[
+\mathbb{P}(|\mathcal{E}_n(f) - \mathcal{E}(f)| > \varepsilon) \leq 2\exp\left(-\frac{2n\varepsilon^2}{M^2}\right)
+\]
+\end{definition}
+
+\subsection{Union Bound and Sample Complexity}
+
+\begin{definition}[Union Bound for Generalization]
+\[
+\mathbb{P}(|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)| > \varepsilon) \leq \mathbb{P}\left(\sup_{f \in \mathcal{F}} |\mathcal{E}_n(f) - \mathcal{E}(f)| \geq \varepsilon\right)
+\]
+\[
+\leq \sum_{f \in \mathcal{F}} \mathbb{P}(|\mathcal{E}_n(f) - \mathcal{E}(f)| \geq \varepsilon) \leq 2|\mathcal{H}| \exp\left(-\frac{n\varepsilon^2}{2M^2}\right)
+\]
+
+For any $\delta \in (0,1]$, with probability at least $1 - \delta$:
+\[
+|\mathcal{E}_n(f_n) - \mathcal{E}(f_n)| \leq \sqrt{\frac{2M^2 \log(2|\mathcal{H}|/\delta)}{n}}
+\]
+\end{definition}
+
+\begin{theorem}[Convergence Rate]
+The rate of convergence of the generalization error is $O(1/\sqrt{n})$.
+\end{theorem}
+
+\subsection{Gap When True Function Outside Hypothesis Class}
+
+\begin{remark}[Irreducible Gap]
+If the optimal function $f^* \notin \mathcal{H}$, then ERM on $\mathcal{H}$ will never minimize the expected risk. There is always an irreducible gap. Consider $f_n = \arg\min_{f \in \mathcal{H}} \mathcal{E}_n(f)$ with $f^* \in \mathcal{H}^c$. The excess risk satisfies:
+\[
+\mathcal{E}(f_n) - \mathcal{E}(f^*) \leq |\mathcal{E}(f^*) - \mathcal{E}(f_n)| + \text{(estimation and generalization error)}
+\]
+
+This demonstrates the importance of choosing an expressive enough hypothesis class to contain or approximate the true function.
+\end{remark}
+
+\newpage
+
+% PAGE 8 CONTENT
+
+\section{Rademacher Complexity and Advanced Generalization Bounds}
+
+This section develops the theory of Rademacher complexity, a fundamental tool for deriving data-dependent generalization bounds that adapt to hypothesis class complexity.
+
+\subsection{Regularization and Excess Risk Decomposition}
+
+\begin{definition}[Regularization Framework]
+$\sigma$ is a regularization parameter. Assume $\mathcal{H} \subseteq \mathcal{L}_\sigma$ where $|\gamma| \leq \sigma$. Given training points, we find an estimator $f_{n,n}$ on $\mathcal{H}_\sigma$. Let $\gamma = \sigma(n)$ increase as $n \to \infty$.
+\end{definition}
+
+\begin{definition}[Excess Risk Decomposition with Regularization]
+For $f_n = \arg\min_{f \in \mathcal{H}} \mathcal{E}_n(f)$, the excess risk can be decomposed as:
+\[
+\mathcal{E}(f_{n,n}) - \mathcal{E}(f^*) = \underbrace{\mathcal{E}(f_{n,n}) - \mathcal{E}_n(f_{n,n})}_{\text{sample error}} + \underbrace{\mathcal{E}_n(f_{n,n}) - \inf_{f \in \mathcal{H}} \mathcal{E}(f)}_{\text{approximation error}} + \underbrace{\inf_{f \in \mathcal{H}} \mathcal{E}(f) - \mathcal{E}(f^*)}_{\text{irreducible error}}
+\]
+\end{definition}
+
+\begin{definition}[Universal Hypothesis Classes]
+If the irreducible error is 0, then $\mathcal{H}$ is called \textit{universal}. For example, RBF (Radial Basis Functions) induced by Gaussian kernels form a universal hypothesis class.
+\end{definition}
+
+\begin{definition}[Approximation Error (Bias)]
+Approximation error does not depend on the dataset but depends on the underlying distribution $p$. It is also referred to as \textit{bias}. Under mild assumptions:
+\[
+\lim_{n \to \infty} \mathbb{E}[\mathcal{E}(f_n) - \inf_{f \in \mathcal{H}} \mathcal{E}(f)] = 0
+\]
+\end{definition}
+
+\begin{definition}[Sample Error]
+Sample error is a random quantity depending on data:
+\[
+\mathcal{E}(f_{n,n}) - \mathcal{E}(f^*) = \underbrace{\mathcal{E}(f_{n,n}) - \mathcal{E}_n(f_{n,n})}_{\text{generalization error}} + \underbrace{\mathcal{E}_n(f_{n,n}) - \mathcal{E}_n(f^*)}_{\text{excess empirical risk}} + \underbrace{\mathcal{E}(f^*) - \mathcal{E}(f^*)}_{\text{generalization error, O(1) in expectation}}
+\]
+\end{definition}
+
+\subsection{Rademacher Complexity}
+
+\begin{definition}[Empirical Rademacher Complexity]
+Let $\mathcal{Z}$ be a set and $S = \{z_i\}_{i=1}^n$ a dataset on $\mathcal{Z}$. The empirical Rademacher complexity of a space of hypotheses $\mathcal{H} \subseteq \{f: \mathcal{Z} \to \mathbb{R}\}$ is:
+\[
+\mathcal{R}_S(\mathcal{H}) = \mathbb{E}_\sigma \left[\sup_{f \in \mathcal{H}} \frac{1}{n} \sum_{i=1}^n \sigma_i f(z_i)\right]
+\]
+where $\sigma_i = \{\sigma_i\}_{i=1}^n$ are Rademacher variables with $\mathbb{P}(\sigma_i = 1) = \mathbb{P}(\sigma_i = -1) = \frac{1}{2}$.
+\end{definition}
+
+\begin{definition}[Population Rademacher Complexity]
+The Rademacher complexity is the expectation of $\mathcal{R}_S(\mathcal{H})$ over all samples:
+\[
+\mathcal{R}_n(\mathcal{H}) = \mathbb{E}_{S \sim \rho^n}[\mathcal{R}_S(\mathcal{H})]
+\]
+\end{definition}
+
+\begin{remark}[Intuition of Rademacher Complexity]
+Rademacher complexity measures how well a hypothesis class can fit pure noise. If $\mathcal{H}$ is powerful, there exists an $f$ that correlates with many random $\pm 1$ signals, making the supremum in the definition large (high complexity). Formally:
+\[
+\mathcal{R}_S(\mathcal{H}) \approx \text{``average maximum correlation with random } \pm 1 \text{ noise''}
+\]
+
+Smaller Rademacher complexity values guarantee smaller generalization gaps, while large values signal potential overfitting.
+\end{remark}
+
+\subsection{Generalization Bounds via Rademacher Complexity}
+
+\begin{theorem}[Rademacher Complexity Bound]
+\[
+\mathbb{E}_S \left[\sup_{f \in \mathcal{H}} |\mathcal{E}(f) - \mathcal{E}_n(f)|\right] \leq 2\mathcal{R}_n(\ell \circ \mathcal{H})
+\]
+where $\ell: \mathcal{Z} \times \mathcal{Y} \to \mathbb{R}$ is a loss function with $\ell(f(x), y)$.
+\end{theorem}
+
+\begin{remark}[Proof Sketch]
+The proof uses the symmetry argument:
+\[
+\mathbb{E}_S[\sup_{f \in \mathcal{H}} |\mathcal{E}(f) - \mathcal{E}_S(f)|] = \mathbb{E}_S\left[\sup_{f \in \mathcal{H}} \left|\mathbb{E}_{s,\sigma}\left[\sigma_i \ell(f)\right] - \mathbb{E}_S[\sigma_n \ell(f)]\right|\right]
+\]
+\[
+\leq \mathbb{E}_{S,S'}\left[\sup_{f \in \mathcal{H}} |\sigma_{s,i} \ell_i(f) - \ell_i'(f)|\right]
+\]
+\[
+= \mathbb{E}_{S,S'}\left[\sup_{f \in \mathcal{H}} |\sigma(\ell_{s,i}(f) - \ell_{s',i}(f))|\right]
+\]
+\[
+\leq 2\mathbb{E}_{S,\sigma}\left[\sup_{f \in \mathcal{H}} \frac{1}{n}\sum_i \sigma_i \ell(f(x_i), y_i)\right] = 2\mathcal{R}_n(\ell \circ \mathcal{H})
+\]
+\end{remark}
+
+\subsection{Lipschitz Contraction and Bounded Losses}
+
+\begin{theorem}[Contraction Principle]
+Let $\ell(\cdot, y)$ be $L$-Lipschitz uniformly for all $y \in \mathcal{Y}$ with $L > 0$. Then, for any set $S = \{(x_i, y_i)\}_{i=1}^n$:
+\[
+\mathcal{R}_S(\ell \circ \mathcal{H}) \leq L \mathcal{R}_S(\mathcal{H}), \quad \text{with } S_\mu = \{X_i\}_{i=1}^n
+\]
+
+Furthermore, for any probability distribution $\rho$ on $\mathcal{X} \times \mathcal{Y}$ and any $n \in \mathbb{N}$:
+\[
+\mathcal{R}_n(\ell \circ \mathcal{H}) \leq L\mathcal{R}_n(\mathcal{H})
+\]
+
+This shows that Lipschitz loss functions preserve and contract Rademacher complexity.
+\end{theorem}
+
+\newpage
+
+% PAGE 9 CONTENT
+
+\section{McDiarmid Inequality, RKHS, and Optimization Methods}
+
+The previous section developed deterministic generalization bounds. This section introduces probabilistic concentration inequalities and connects theory to practical optimization algorithms.
+
+\subsection{McDiarmid's Inequality and High-Probability Bounds}
+
+\begin{theorem}[McDiarmid's Inequality]
+Let $\mathcal{Z}$ be a set and $g: 2^n \to \mathbb{R}$ be a function such that there exists $c > 0$ such that for all $i = 1, \ldots, n$ and for all $z_1, \ldots, z_n, z_i' \in \mathcal{Z}$:
+\[
+|g(z_1, \ldots, z_n) - g(z_1, \ldots, z_{i-1}, z_i', z_{i+1}, \ldots, z_n)| \leq c
+\]
+Let $Z_1, \ldots, Z_n$ be $n$ independent random variables taking values in $\mathcal{Z}$. Then for all $\delta > 0$, with probability at least $1 - \delta$:
+\[
+\left|g(Z_1, \ldots, Z_n) - \mathbb{E}[g(Z_1, \ldots, Z_n)]\right| \leq c\sqrt{\frac{n \log \frac{2}{\delta}}{2}}
+\]
+\end{theorem}
+
+\begin{remark}[Application to Empirical Risk]
+Let $z_i = (x_i, y_i)$ and 
+\[
+g(Z_1, \ldots, Z_n) = \sup_{f \in \mathcal{H}} \left[\mathcal{E}(f) - \frac{1}{n}\sum_{i=1}^n \ell(f(x_i), y_i)\right]
+\]
+Assume $\ell(\cdot, y) \in \mathcal{L}^c$. Then:
+\[
+\left|g(Z_1, \ldots, Z_n) - g(Z_1, \ldots, Z_{i-1}, z_i', z_{i+1}, \ldots, Z_n)\right| \leq \frac{1}{n}|\ell(f(x), y_1) - \ell(f(x), y_2)| \leq \frac{2c}{n}
+\]
+
+Thus, for all $\delta > 0$ with probability at least $1 - \delta$:
+\[
+\sup_{f \in \mathcal{H}} |\mathcal{E}(f) - \mathcal{E}_n(f)| \leq \mathbb{E}_S\left[\sup_{f \in \mathcal{H}}|\mathcal{E}(f) - \mathcal{E}_n(f)|\right] + c\sqrt{\frac{2\log(2/\delta)}{n}}
+\]
+\[
+\leq 2L\mathcal{R}_n(\mathcal{H}) + c\sqrt{\frac{2\log(2/\delta)}{n}}
+\]
+\end{remark}
+
+\subsection{Gradient Descent Convergence}
+
+\begin{theorem}[Gradient Descent Error Bound]
+\[
+\mathbb{E}[\mathcal{E}_n(f_n) - \mathcal{E}_n(f_n^*)] < O(1/\sqrt{k})
+\]
+for gradient descent after $k$ iterations.
+\end{theorem}
+
+\subsection{Reproducing Kernel Hilbert Space (RKHS) and Bounded Kernels}
+
+\begin{definition}[RKHS with Bounded Kernels]
+In RKHS where $k: \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ is a bounded kernel with $k(x,x) \leq x^2$. Let $\mathcal{H}$ be the RKHS associated with $k$ and $\mathcal{H}_\gamma$ be the space of functions $f \in \mathcal{X}$ such that $\|f\|_k \leq \sigma$. Then:
+\[
+\mathcal{R}(\mathcal{H}_\gamma) \leq \frac{\sigma\sqrt{k}}{\sqrt{n}}
+\]
+As $n \to \infty$, we have $\mathcal{R}(\mathcal{H}_\gamma) \to 0$, and as $\sigma \uparrow$, less regularization is required.
+\end{definition}
+
+\begin{remark}[Tikhonov Regularization Connection]
+In Tikhonov regularization, $\|w_{s,\lambda}\| \leq \frac{M}{\sqrt{\lambda}}$. If $\ell(y, y') \leq M^2$, we can restrict to $\mathcal{H}_\gamma$ with $\gamma = \frac{M}{\sqrt{\lambda}}$.
+\end{remark}
+
+\subsection{Ivanov Regularization}
+
+\begin{definition}[Ivanov Regularization]
+Ivanov regularization solves:
+\[
+w_{s,\sigma} = \arg\min_{\|w\| \leq \sigma} \mathcal{E}_S(w)
+\]
+\end{definition}
+
+\subsection{Projected Gradient Descent (PGD)}
+
+\begin{definition}[Smooth Convex Optimization with Constraints]
+Let $F: \mathbb{R}^d \to \mathbb{R}$ be a smooth closed convex function and $\mathcal{C} \subseteq \mathbb{R}^d$ be a convex set. We seek to solve the constrained optimization problem:
+\[
+\min_{w \in \mathcal{C}} F(w)
+\]
+\end{definition}
+
+\begin{definition}[Projected Gradient Descent]
+A variant of gradient descent that respects convex constraints. Let $\Pi_\mathcal{C}(w) = \arg\min_{z \in \mathcal{C}} \|z - w\|^2$ be the projection of $w$ onto $\mathcal{C}$. Then:
+\[
+w_{s,t} = \Pi_\mathcal{C}(w_{s,t} - \nabla F(w_{s,t}))
+\]
+\end{definition}
+
+\begin{remark}[Ivanov Projection]
+In Ivanov regularization, the projection operator is:
+\[
+\Pi_{\mathcal{B}_\sigma}(w) = \begin{cases}
+w & \text{if } \|w\| \leq \sigma \\
+\frac{w}{\|w\|} \sigma & \text{otherwise}
+\end{cases}
+\]
+\end{remark}
+
+\begin{theorem}[PGD Convergence Rate]
+If $\eta = 1/M$ for a convex and $M$-smooth function $F$, then:
+\[
+F(w_{s,t}) - F(w^*) \leq \frac{2M}{t^2} \|w_s - w^*\|^2
+\]
+showing quadratic (geometric) convergence after $t$ iterations.
+\end{theorem}
+
+\subsection{Introduction to Online Learning}
+
+\begin{definition}[Online Learning Model]
+\begin{itemize}
+    \item \textbf{Data}: Online sequence of data (usually with no distributional assumptions)
+    \item \textbf{Aim}: Sequentially predict and update a classifier to predict well on the sequence, with no assumption of training/testing distribution separation
+    \item \textbf{Evaluation Metric}: Cumulative error over all predictions
+\end{itemize}
+\end{definition}
+
+\newpage
+
+% PAGE 10 CONTENT
+
+\section{Online Learning with Experts}
+
+This section studies the problem of combining predictions from multiple experts in an online setting, where the learner makes sequential predictions and receives feedback.
+
+\subsection{Online Learning with Experts Framework}
+
+\begin{definition}[Expert Prediction Setup]
+Let $S = S_m = \{(x_1, y_1), \ldots, (x_m, y_m)\}$ with $(x_t, y_t) \in [0,1]^n \times [0,1]$. Here:
+\begin{itemize}
+    \item $x_t$ is a vector of predictions from $n$ experts about an outcome $y_t$
+    \item Goal: Find a master algorithm $A$ that combines the expert predictions
+\end{itemize}
+
+The evaluation metric is the loss (mistakes) of the master algorithm $A$ on $S$:
+\[
+L_A(S) := \sum_{t=1}^m |y_t - \hat{y}_t|
+\]
+where $\hat{y}_t = A(x_1, \ldots)(x_t)$ is the prediction of online algorithm $A$ trained on $S_{\leq t}$ and evaluated on $x_t$.
+\end{definition}
+
+\begin{definition}[Halving Algorithm]
+For any sequence with one consistent expert (always right), the Halving algorithm makes at most $\log_2 n$ mistakes. Whenever the algorithm makes a mistake, it eliminates more than half of the remaining experts.
+\end{definition}
+
+\begin{definition}[Expert Loss]
+The loss of the $i$-th expert $E_i$ is:
+\[
+L_i(S) = \sum_{t=1}^m |y_t - x_{t,i}|
+\]
+\end{definition}
+
+\subsection{Weighted Majority Algorithm}
+
+\begin{definition}[Weighted Majority Algorithm (WMA)]
+\begin{itemize}
+    \item \textbf{Majority Rule}: If the majority is right, the weights of minority experts are multiplied by $\beta$. If the majority makes a mistake, multiply the majority weights by $\beta$.
+    
+    \item \textbf{Weight Updates}: 
+    \[
+    W_{t,i} = \beta^{M_i'}, \quad \text{where } W_{t,i} \text{ is the weight of } E_i \text{ at the beginning of trial } t
+    \]
+    and $M_i'$ is the number of mistakes of $E_i$ at the start of trial $t$.
+    
+    \item \textbf{Total Weight}: 
+    \[
+    W_{t+1} \leq \beta E W_t, \quad W_t = \sum_{i=1}^m W_{t,i} \text{ (total weight at the start of trial } t\text{)}
+    \]
+    
+    \item \textbf{Bound Derivation}:
+    \[
+    W_{t+1} \leq \left(\frac{1-\beta}{2}\right)^T W_i = \left(\frac{1-\beta}{2} E\right)^n
+    \]
+    and 
+    \[
+    W_{t+1} = \sum_{j=1}^m W_{t,j} = \sum_{j=1}^m \beta^{M_j} \geq \beta^{M^*} \text{ where } M^* \text{ is the best expert's mistakes}
+    \]
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[Weighted Majority Bound]
+Combining the above, we get:
+\[
+T \leq \frac{\ln \beta}{\ln \frac{(1-\beta) E}{2}} M_* + \frac{1}{\ln(1/\beta)} \ln n
+\]
+
+Since the total mistakes the master algorithm makes is $M \leq T$:
+\[
+M \leq \frac{\ln \beta}{\ln \frac{(1-\beta) E}{2}} M_* + \frac{1}{\ln(1/\beta)} \ln n
+\]
+\end{theorem}
+
+\subsection{Loss Functions for Online Learning}
+
+\begin{definition}[Entropic Loss]
+For a loss function $L: [0,1] \times L_0([\cdot], 1) \to [0, +\infty)$, the entropic (logarithmic) loss is:
+\[
+L(y, \hat{y}) = y \ln \hat{y}^{-1} + (1-y) \ln(1-\hat{y})^{-1}
+\]
+\begin{itemize}
+    \item When $y = 0$: $L = -\log(\hat{y})$
+    \item When $y = 1$: $L = -y \ln \hat{y}$
+\end{itemize}
+This measures the cross entropy between the true label and the model's distribution. Here $Q$ is the true label and $P_0$ is the model prediction.
+\end{definition}
+
+\subsection{Weighted Average Algorithm}
+
+\begin{definition}[Weighted Average (WA) Algorithm]
+\textbf{Initialize}: $v_i = \left(\frac{1}{n}, \ldots, \frac{1}{n}\right)$, $L_{WA} := 0$, $L := 0$. Let $\eta \in (0, \infty)$ be the learning rate with $\eta = -\log \beta$.
+
+\textbf{For } $t = 1, \ldots, m$ \textbf{ Do}:
+\begin{enumerate}
+    \item \textbf{Receive instance}: $x_t \in [0,1]^n$
+    \item \textbf{Predict}: $\hat{y}_t = v_t \cdot x_t \in [0,1]$
+    \item \textbf{Receive label}: $y_t \in \{0, 1\}$
+    \item \textbf{Calculate loss}: $L_{WA} \mathrel{+}= L(y_t, \hat{y}_t)$, $L_t := L(y_t, x_{t,i})$
+    \item \textbf{Update weights}:
+    \[
+    v_{t+1,i} = \frac{v_{t,i} e^{-\eta L_t}}{\sum_j v_{t,j} e^{-\eta L_t}}
+    \]
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Weighted Average Algorithm Bound]
+For a sequence $S = (x_1, y_1), \ldots, (x_m, y_m)$ with $(x_i, y_i) \in [0,1]^n \times [0,1]$:
+\[
+L_{WA}(S) - \min_i L_i(S) \leq \frac{1}{\eta} \ln(n)
+\]
+
+For specific losses:
+\begin{itemize}
+    \item \textbf{Entropic loss}: $\eta = 1$
+    \item \textbf{Square loss}: $\eta = 1/2$
+\end{itemize}
+\end{theorem}
+
+\begin{remark}[Algorithm Analysis via Potential Function]
+Define the potential function:
+\[
+\text{Len}(y_t, \hat{y}_t) = \sum_{i=1}^m u_i \text{Len}(y_t, x_{t,i}) = d(u, y_t) - d(u, v_{t+1})
+\]
+
+where the KL divergence $d(u, v_i) = \sum_i u_i \log \frac{u_i}{v_i}$ satisfies:
+\[
+\sum_{t=1}^m \text{Len}(y_t, \hat{y}_t) - \sum_{t=1}^m \sum_{i=1}^m u_i \text{Len}(y_t, x_{t,i}) = d(u, y_t) - d(u, y_{m+1})
+\]
+
+\[
+d(u, v_i) = \sum_i u_i \log \frac{u_i}{v_i} = \sum_i u_i \log u + \log n \leq \log n
+\]
+
+This shows the cumulative loss is bounded by $\log n$, independent of the sequence length.
+\end{remark}
+
+\newpage
+
+% PAGE 11 CONTENT
+
+\section{Advanced Online Learning Algorithms}
+
+This section covers advanced algorithms for online learning: HEDGE, the Perceptron, and online gradient descent with various loss functions.
+
+\subsection{HEDGE Algorithms}
+
+\begin{definition}[HEDGE-1 Algorithm]
+Initialize $V_t \in \mathcal{L}_n$, receive predictions $x_t \in [0,1]^n$. 
+\begin{itemize}
+    \item \textbf{Loss}: $L_t^{HA} = v_t \cdot x_t$, with $L_t = x_t$
+    \item \textbf{Update}: 
+    \[
+    v_{t+1,i} := \frac{v_{t,i} e^{-\eta L_t}}{\sum_j v_{t,j} e^{-\eta L_t}}
+    \]
+\end{itemize}
+\end{definition}
+
+\begin{definition}[HEDGE-2 Algorithm]
+Sample an expert based on distribution $v_t$, and use that expert's prediction as $\hat{y}_t$.
+\begin{itemize}
+    \item \textbf{Loss}: $\mathbb{E}[L_t^{HA}] := \mathbb{E}[L_t^{HA}] + v_t \cdot x_t$, with $L_i \mathrel{+}= \xi_{t,i}$
+    \item \textbf{Update}:
+    \[
+    v_{t+1,i} := \frac{v_{t,i} e^{-\eta L_t}}{\sum_j v_{t,j} e^{-\eta L_t}}
+    \]
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[HEDGE Regret Bound]
+Let $S = \ell_1, \ldots, \ell_m \in [0,1]^n$. The regret of the HEDGE HA-2 algorithm with learning rate $\eta = \sqrt{\frac{2 \ln n}{m}}$ is:
+\[
+\mathbb{E}[L_{HA}(S)] - \min_i L_i(S) \leq \sqrt{2m \ln n}
+\]
+\end{theorem}
+
+\subsection{Perceptron Algorithm}
+
+\begin{definition}[Perceptron Setup and Assumptions]
+\textbf{Assumption}: Data is linearly separable by some margin $T$. Hence there exists a hyperplane with normal vector $u$ such that:
+\begin{enumerate}
+    \item $\|u\| = 1$
+    \item $(x_t, y_t)$ with $\|x_t\| \leq R$ and $y_t \in \{+1, -1\}$
+    \item $y_t(x_t \cdot u) > T$ (margin condition)
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Perceptron Algorithm]
+\textbf{Initialize}: $w_1 = 0$; $M_t = 0$ (number of mistakes).
+
+\textbf{For } $t = 1$ to $m$ \textbf{ do}:
+\begin{enumerate}
+    \item \textbf{Predict}: $\hat{y}_t = \text{sign}(w_t \cdot x_t)$
+    \item \textbf{If mistake} (i.e., $\hat{y}_t y_t \leq 0$):
+    \begin{itemize}
+        \item Update: $w_{t+1} = w_t + y_t x_t$; $M_{t+1} = M_t + 1$
+    \end{itemize}
+    \item \textbf{Else}:
+    \begin{itemize}
+        \item $w_{t+1} = w_t$; $M_{t+1} = M_t$
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Mistake Bound}: Number of mistakes is at most $\left(\frac{R}{T}\right)^2$.
+\end{definition}
+
+\begin{remark}[Perceptron Convergence Analysis]
+If $(w_t \cdot x_t)y_t < 0$, then:
+\[
+\|w_{t+1}\|^2 \leq |\|w_t\|^2 + \|x_t\|^2| \leq M_t R^2, \quad \|w_t\| \geq M_t T
+\]
+This gives the quadratic mistake bound.
+\end{remark}
+
+\subsection{Online Gradient Descent with Hinge Loss}
+
+\begin{definition}[Online GD with Hinge Loss and $\ell^2$ Penalty]
+\[
+w_{t+1} = \arg\min_{w \in H} L_{\text{hinge}}(y_t, w \cdot x_t) + \lambda \|w - w_t\|^2
+\]
+\[
+= \arg\min_{w \in H} \max\left(-1 - y_t w \cdot x_t, 0\right) + \lambda \|w - w_t\|^2
+\]
+
+This yields:
+\[
+w_{t+1} = \begin{cases}
+S w_t & \text{if } y_t(w \cdot x_t) > 1 \\
+w_t + y_t x_t & \text{if } y_t(w \cdot x_t) < 1 \\
+w_t - \lambda & \text{otherwise}
+\end{cases}
+\]
+This algorithm can be generalized to other losses as long as the loss function is convex and its subgradient is bounded.
+\end{definition}
+
+\begin{definition}[OGD Algorithm Details]
+\textbf{Initialize}: $w^1 = 0$, $L_{\text{sqn}} = 0$, $\eta = \frac{1}{2\lambda}$
+
+\textbf{For } $t = 1$ to $m$ \textbf{ do}:
+\begin{enumerate}
+    \item $L_{\text{sqn}} \mathrel{+}= L_t(y_t, \hat{y}_t)$
+    \item $w_{t+1} = w_t + \eta u_t y_t \hat{y}_{t} x_t = w_t - \eta Z_t$
+\end{enumerate}
+where $Z_t$ is a subgradient of the hinge loss.
+\end{definition}
+
+\begin{theorem}[OGD Regret Bound]
+Let $R = \max_t \|x_t\|$ and $\eta = \frac{U}{\sqrt{Tm}}$. Then for any $u$ with $\|u\| \leq U$, the regret produced by OGD satisfies:
+\[
+\sum_{t=1}^m \left[L_{\text{hinge}}(y_t, \hat{y}) - L_{\text{hinge}}(y_t, u \cdot x_t)\right] \leq \sqrt{U^2 R^2 T m}
+\]
+\end{theorem}
+
+\subsection{Surrogate Loss Approaches}
+
+\begin{definition}[Surrogate Loss Framework]
+The surrogate loss approach consists of three stages:
+
+\begin{itemize}
+    \item \textbf{Encoding } $c$: Map $Y \to \mathcal{H}$ into a suitable linear feature space $\mathcal{H}$ (e.g., $\mathcal{H} = \mathbb{R}^d$)
+    
+    \item \textbf{Surrogate Loss } $L'$: Define $L': \mathcal{H} \times \mathcal{H} \to \mathbb{R}$ and learn a classifier $g_n: \mathcal{Z} \to \mathcal{H}$ over hypotheses $\mathcal{G}_n$:
+    \[
+    g_n = \arg\min_{g \in \mathcal{G}_n} \frac{1}{n}\sum_{i=1}^n L(g_n(c(y_i)), c(y_i))
+    \]
+    where the original problem is $\ell(f(x), y)$ with $f: \mathcal{X} \to \mathcal{Y}$
+    
+    \item \textbf{Decoding } $d$: Map $\mathcal{H} \to \mathcal{Y}$ such that the final model is $f_n = d \circ g_n: \mathcal{X} \to \mathcal{Y}$ with structure $h(\psi) = d(g(\psi))$
+\end{itemize}
+\end{definition}
+
+\newpage
+
+% PAGE 12 CONTENT
+
+\section{Multi-Class Classification and Surrogates}
+
+\subsection{Multi-Class Classification}
+
+\begin{definition}[Multi-Class Problem]
+For multi-class classification with $T$ classes:
+\[
+Y = \{1, 2, \ldots, T\} \quad \text{for } T \text{ classes}
+\]
+
+The encoding strategy is:
+\[
+c : Y \to \mathbb{R}^T, \quad \text{one-hot vector } c(t) = e_t e^T \quad \text{(where } e_t \text{ is the vector of 0 but 1 in the } t\text{-th position)}
+\]
+
+The one-vs-all loss is:
+\[
+L(g(x), e_j) = \sum_{t=1}^T L(g(x)^{(t)}, e_j^{(t)}) \quad \begin{array}{l} g(x) \in \mathbb{R}^T, \text{ where } e_j \in \mathbb{R}^T \\ g(x)^{(t)} \text{ is the } t\text{-th element} \\ L_t \text{ is the loss on } t\text{-th entry} \end{array}
+\]
+
+The decoding function $d: \mathbb{R}^T \to Y$ such that:
+\[
+d(g(x)) = \arg\max_{t \in \{1,\ldots,T\}} g(x)^{(t)}
+\]
+\end{definition}
+
+\subsection{Finite Dimensional Loss as Matrix}
+
+\begin{definition}[Matrix Representation of Multi-Class Loss]
+For $Y = \{1, 2, \ldots, T\}$, we can write any loss $\ell : Y \times Y \to \mathbb{R}$ represented by a matrix $V \in \mathbb{R}^{T \times T}$:
+
+\[
+V = \begin{bmatrix} z_{11} & z_{12} & \cdots & z_{1T} \\ z_{21} & z_{22} & \cdots & z_{2T} \\ \vdots & \vdots & \ddots & \vdots \\ z_{T1} & z_{T2} & \cdots & z_{TT} \end{bmatrix}
+\]
+
+so that $\ell(y, z) = V_{yz}$ where $e_y, e_z$ are one-hot vectors.
+
+The prediction rule becomes:
+\[
+f^*(x) = \arg\min_{z \in Y} \sum_{t=1}^T \ell(t, z) \, dP(Y=t|X=x) = \arg\min_{z \in Y} \sum_{t=1}^T e_t^T V e_z
+\]
+
+where the optimal classifier is:
+\[
+g_\ell(x) = \int e_y \, dP(Y|X)
+\]
+\end{definition}
+
+\subsection{Implicit Embeddings}
+
+\begin{definition}[Implicit Embeddings]
+A continuous loss $\ell: Y \times Y \to \mathbb{R}$ admits an implicit embedding if there exists a map $C: Y \to \mathcal{H}$ into a separable Hilbert space $\mathcal{H}$ and a linear operator $V: \mathcal{H} \to \mathcal{H}$ such that:
+\[
+\ell(z, y) = \langle C(z), V c(y) \rangle_\mathcal{H}
+\]
+\end{definition}
+
+\subsection{Using Implicit Embeddings}
+
+\begin{remark}[Implicit Embedding Application]
+If $\ell$ has an implicit embedding, then:
+\[
+f^*(x) = \arg\min_{z \in Y} \langle C(z), V g_\ell(x) \rangle_\mathcal{H}
+\]
+
+where:
+\[
+g_\ell : \mathcal{X} \to \mathcal{H} \quad \text{such that} \quad g_\ell(x) = \int c(y) \, dP(Y|X)
+\]
+
+the conditional mean embedding of $P(Y|X)$ w.r.t. $\ell(z,y) = \langle c(z), V g_\ell(x) \rangle_\mathcal{H}$.
+
+We can replace $g_\ell$ with an estimator $\hat{g}_n: \mathcal{Z} \to \mathcal{H}$:
+\[
+\hat{f}_n(x) = \arg\min_{z \in Y} \langle c(z), V \hat{g}_n(x) \rangle_\mathcal{H}
+\]
+\end{remark}
+
+\subsection{General Surrogate Approach}
+
+\begin{definition}[General Surrogate Approach]
+The general framework consists of three components:
+
+\begin{itemize}
+    \item \textbf{Encoding} $c$: $Y \to \mathcal{H}$ maps outputs to abstract vector space
+    
+    \item \textbf{Surrogate Loss} $L': \mathcal{H} \times \mathcal{H} \to \mathbb{R}$ defining a problem to learn a function $g_n: \mathcal{Z} \to \mathcal{H}$ over $\mathcal{G}$:
+    \[
+    g_n = \arg\min_{g \in \mathcal{G}} \frac{1}{n}\sum_{i=1}^n \|(g(c(y_i)) - c(y_i))\|_\mathcal{H}^2
+    \]
+    
+    \item \textbf{Decoding} $d$: $\mathcal{H} \to \mathcal{Y}$ such that $f_n = d \circ g_n: \mathcal{X} \to \mathcal{Y}$ where $f_n(x) = d(g_n(x))$
+\end{itemize}
+\end{definition}
+
+\subsection{Kernel Feature Approximation}
+
+\begin{remark}[Linear Approximation via Kernel]
+Let $\mathcal{Z} = \mathbb{R}^d$. We can approximate $g_\ell$ with $g_\ell(x) = W_\lambda x$ where:
+\[
+W_\lambda = \arg\min_{W \in \mathcal{G}_\text{grad}} \frac{1}{n}\sum_{i=1}^n \|c(y_i) - W x_i\|^2 + \lambda \|W\|_{\text{Frob}}^2
+\]
+
+\[
+g_\ell(x) = W_\lambda x = Y^T(X(X^T X + \eta I)^{-1}) x \quad X \in \mathbb{R}^{n \times d}, \quad Y \in \mathbb{R}^{D \times n}
+\]
+
+We can decompose this as:
+\[
+\alpha(x) = (\alpha_F(x), \ldots, \alpha_H(x))^T = [X(X^T X + \eta I)^{-1}] x \in \mathbb{R}^n
+\]
+
+If we have kernel, then $\alpha(x) = (k + \eta I)^{-1} v(x)$ where $v(x) \in \mathbb{R}^n$ is the evaluation vector $v(x_i) = k(x_i, x)$.
+
+\[
+W_\lambda = \arg\min_{w \in \mathcal{G}_\text{grad}} \frac{1}{n}\sum_{i=1}^n \|(c(y_i) - W x_i\|^2 + \lambda \|W\|_{\text{NS}}^2
+\]
+\end{remark}
+
+\newpage
+
+% PAGE 13 CONTENT
+
+\section{Convergence Analysis and Consistency}
+
+\subsection{Decoding in Multi-Class}
+
+\begin{definition}[Decoding Function]
+The decoding function $d: \mathcal{H} \to Y$ is such that:
+\[
+f_n = d \circ g_n \quad \text{with} \quad d \circ g = \arg\min_{z \in Y} \langle c(z), V g_\ell(x) \rangle_\mathcal{H}
+\]
+
+This gives:
+\[
+f_n(x) = \arg\min_{z \in Y} \langle c(z), V g_n(x) \rangle = \arg\min_{z \in Y} \langle c(z), V \left(\sum_i \alpha_i(x) c(y_i)\right) \rangle
+\]
+\[
+= \arg\min_{z \in Y} \sum_{i=1}^n \sum_{t=1}^T \alpha_i(x) \ell(z, y_i)
+\]
+
+We only need $\alpha$ and how to minimize $\ell$ over $y$.
+\end{definition}
+
+\subsection{Implicit Embeddings Condition}
+
+\begin{lemma}[IE (Implicit Embeddings) Condition]
+Let $\ell$ admit an IE. Let $\Omega = \sup_{y} \|c(y)\|_\mathcal{H}$ and $\|V\| = \sup_{g} \|Vg\|_\mathcal{H}$, then:
+\[
+\mathcal{E}(\ell \circ \text{dog}) - \mathcal{E}(\ell \circ f_x) \leq 2\Omega \|V\| \sqrt{\mathcal{R}(g_\text{yes}) - \mathcal{R}(\tilde{g}_*))}
+\]
+
+If $\mathcal{R}(g_n) \to \mathcal{R}(\ell_k*)$, then $\mathcal{E}(\ell \circ \tilde{g}_n) \to \mathcal{E}(\ell f_x)$.
+\end{lemma}
+
+\subsection{Universal Consistency}
+
+\begin{theorem}[Universal Consistency]
+Let $\mathcal{Z}, Y$ be compact. Let $\ell$ admit an implicit embedding and $k: \mathcal{Z} \times \mathcal{Z} \to \mathbb{R}$ be a universal kernel. Choose $\lambda = \frac{1}{n^\alpha}$ to train $f_n$, then:
+\[
+\lim_{n \to \infty} \mathbb{E}[\mathcal{E}(f_n)] = \mathcal{E}(f^*) \quad \text{with probability } 1
+\]
+\end{theorem}
+
+\subsection{Learning Rates}
+
+\begin{remark}[Learning Rates for Surrogate Losses]
+For $\delta \in (0,1)$:
+\[
+\mathcal{E}(f_n) - \mathcal{E}(f^*) = \mathcal{O}(\|V\| \log(1/\delta) n^{-1/2})
+\]
+
+hold with probability $1-\delta$.
+\end{remark}
+
+\end{document}
