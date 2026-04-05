@@ -27,9 +27,28 @@
 \tableofcontents
 \newpage
 
+\section*{Introduction}
+
+These lecture notes cover the fundamentals and advanced techniques in unsupervised learning. The course begins with essential mathematical foundations, develops core probabilistic and statistical concepts, and concludes with modern inference methods and graphical models.
+
+The notes are organized into four conceptual parts:
+
+\begin{enumerate}
+    \item \textbf{Part I - Foundations}: Linear algebra and probabilistic foundations essential for understanding all subsequent material
+    \item \textbf{Part II - Probabilistic Models}: Core unsupervised learning models including dimensionality reduction, mixture models, and the EM algorithm
+    \item \textbf{Part III - Sequential Models}: Methods for sequences and time series, including Markov chains, HMMs, and state space models
+    \item \textbf{Part IV - Advanced Methods}: Modern sampling, inference, and graphical model techniques
+\end{enumerate}
+
+Throughout, we emphasize connections between different frameworks and develop both theoretical understanding and practical intuition for each method.
+
+\newpage
+
 % PAGE 1 CONTENT
 
 \section{Exponential Family Distributions}
+
+The exponential family is a fundamental framework in probabilistic modeling that unifies many standard distributions and simplifies inference algorithms. Any parametric probability distribution that satisfies certain regularity conditions can be written in exponential family form, which reveals underlying structure and enables efficient algorithms.
 
 \subsection{Definition and Structure}
 
@@ -107,6 +126,8 @@ The key insight of the exponential family is that data $x$ only affects the like
 \end{itemize}
 
 \section{Bayesian Inference: MAP and Model Selection}
+
+Bayesian inference provides a principled framework for learning from data by combining prior knowledge with observed evidence. Two central tasks are point estimation (finding the best single parameter estimate) and model comparison (determining which model best explains the data). This section develops these concepts and introduces conjugate priors, which enable tractable inference in many practical settings.
 
 \subsection{Maximum A Posteriori Estimation}
 
@@ -218,6 +239,8 @@ The Fisher Information is crucial for:
 \end{itemize}
 
 \section{Linear Algebra: Matrix Properties and Orthonormal Bases}
+
+Linear algebra provides essential tools for understanding covariance structure, data transformations, and optimization. Many unsupervised learning algorithms rely on eigenvalue decompositions and orthogonal transformations to find natural coordinate systems for high-dimensional data. In this section, we review key results that form the backbone of algorithms like PCA and spectral clustering.
 
 \subsection{Eigenvalues of Symmetric Matrices}
 
@@ -371,6 +394,8 @@ The prior precision matrix $\mathbf{A}$ acts as a regularizer, shrinking the wei
 
 \section{Dimensionality Reduction}
 
+High-dimensional data often lies near low-dimensional manifolds, and many machine learning tasks become easier in these lower-dimensional representations. This section develops probabilistic approaches to dimensionality reduction, where Probabilistic PCA extends classical PCA with a full probabilistic model that quantifies uncertainty. By learning low-dimensional representations, these methods reduce computational burden, improve generalization, and often reveal interpretable structure in the data.
+
 \subsection{Probabilistic Principal Component Analysis (PPCA)}
 
 \begin{definition}[Probabilistic PCA Model]
@@ -470,6 +495,8 @@ As the noise variance $\nu \to 0$, the PPCA framework transitions toward standar
 
 \section{Mixture Models}
 
+Mixture models are a flexible class of probabilistic models that assume data comes from one of $M$ different components. By treating the component assignment as a latent variable, we can use the EM algorithm to learn both the component parameters and the mixing proportions. K-means clustering emerges as a limiting case where all uncertainty is removed. Mixture models show how probabilistic modeling naturally leads to useful algorithms for unsupervised learning.
+
 \subsection{Mixture Model Likelihood}
 
 \begin{definition}[Mixture Model]
@@ -546,6 +573,8 @@ Note: K-Means has no learning rate. At each iteration, the parameter update is t
 \end{definition}
 
 \section{Information Theory}
+
+Information theory quantifies uncertainty and provides a principled framework for understanding data compression, divergence measures, and model comparison. The key insight is that information and probability are deeply connected—uncertainty about a random variable can be measured precisely using Shannon entropy, and differences between probability distributions can be quantified using divergence measures. These concepts form the theoretical foundation for many machine learning algorithms.
 
 \subsection{Information and Entropy}
 
@@ -651,6 +680,8 @@ This means:
 \end{theorem}
 
 \section{Divergence Measures and Model Comparison}
+
+Beyond Shannon entropy, we need tools to compare probability distributions, measure how far a learned model is from the true distribution, and select between competing models. Divergence measures like KL divergence and mutual information formalize these concepts. These tools are essential for model selection, for understanding why maximum likelihood estimation works, and for variational inference—approximate inference methods that minimize divergences.
 
 \subsection{Kullback-Leibler Divergence}
 
@@ -765,6 +796,8 @@ where $\hat{P}_{\text{emp}}$ is the empirical distribution on the data.
 \end{theorem}
 
 \section{Variational Inference and the EM Algorithm}
+
+Many unsupervised learning problems involve latent (unobserved) variables that explain the observed data. The Free Energy and the Expectation-Maximization (EM) algorithm provide powerful tools for learning from incomplete data. EM alternates between inferring the latent variables (E-step) and optimizing parameters (M-step), making it one of the most widely used algorithms in unsupervised learning. This section develops the theoretical foundation and shows how EM unifies clustering, dimensionality reduction, and mixture modeling.
 
 \subsection{Free Energy and Variational Lower Bound}
 
@@ -901,6 +934,8 @@ This is linear in the discrete latent variables, making the E-step tractable.
 \end{definition}
 
 \section{Temporal Models: State Space and Hidden Markov Models}
+
+Many real-world datasets have a temporal or sequential structure where current observations depend on past values. This section develops probabilistic models for sequential data, starting with the general framework of latent variable models over time, then specialized to linear Gaussian state space models and hidden Markov models. These models separate the observed data from latent state variables that capture the essential dynamics, enabling both filtering (online state estimation) and smoothing (offline reconstruction of hidden states).
 
 \subsection{General Latent Variable Models}
 
@@ -1272,6 +1307,8 @@ The Baum-Welch algorithm is exactly the EM algorithm applied to HMMs:
 
 \section{Markov Chain Theory and Sampling Methods}
 
+Markov chains are fundamental to understanding both sequential systems and modern sampling algorithms. A Markov chain models systems where the future depends only on the present state, not on history. Beyond their intrinsic importance for sequential modeling, Markov chain theory underpins Markov Chain Monte Carlo (MCMC) methods—powerful algorithms for sampling from complex, high-dimensional distributions. This section develops the theory of Markov chains and then shows how this theory justifies sampling algorithms essential for Bayesian inference.
+
 \subsection{Markov Chain Basics and Classification}
 
 \begin{definition}[Markov Chain Properties]
@@ -1388,107 +1425,11 @@ where $w_i = \frac{p(x_i)}{q(x_i)}$ are the importance weights.
 
 \newpage
 
-% PAGE 8 CONTENT
-
-\section{Markov Chain Properties and Limit Theorems}
-
-\subsection{Accessibility and Communication}
-
-\begin{definition}[Markov Chain Transitions]
-A Markov chain is characterized by transition probabilities $P_i$, where each element $P_{ij}$ represents the probability of transitioning from state $i$ to state $j$.
-\end{definition}
-
-\begin{definition}[Accessibility and Communication]
-State $j$ is said to be \textbf{accessible} from state $i$ (denoted $i \to j$) if $P_{ij}^n > 0$ for some $n \geq 0$. 
-
-States $i$ and $j$ are said to \textbf{communicate} (denoted $i \leftrightarrow j$) if both $i \to j$ and $j \to i$ hold.
-
-A Markov chain is said to be \textbf{irreducible} if all states communicate with each other (there is only one communicating class).
-\end{definition}
-
-\subsection{Recurrence and Transience}
-
-\begin{definition}[Recurrence]
-Let $f_i$ denote the probability that starting in state $i$, the process will ever return to state $i$. Then:
-\[
-f_i^{(n)} = P(\text{return to } i \text{ in exactly } n \text{ steps}), \quad f_i = \sum_{n=1}^{\infty} f_i^{(n)}
-\]
-
-State $i$ is said to be \textbf{recurrent} if $f_i = 1$ (the process will definitely return). Otherwise it is \textbf{transient} ($f_i < 1$).
-
-If states $i$ and $j$ communicate ($i \leftrightarrow j$), then $i$ is recurrent if and only if $j$ is recurrent.
-\end{definition}
-
-\subsection{Periodicity}
-
-\begin{definition}[Periodicity of a Markov Chain]
-The \textbf{period} of state $i$ is:
-\[
-d(i) = \text{g.c.d}\{n \geq 1 : P_{ii}^n > 0\}
-\]
-where g.c.d stands for greatest common divisor.
-
-A Markov chain is \textbf{aperiodic} if $d(i) = 1$ for all states $i$.
-\end{definition}
-
-\begin{remark}[Periodicity is a Class Property]
-If states $i$ and $j$ communicate ($i \leftrightarrow j$), then $d(i) = d(j)$.
-\end{remark}
-
-\subsection{Ergodicity and Stationary Distribution}
-
-\begin{definition}[Ergodicity]
-A Markov chain is \textbf{ergodic} if it is irreducible and aperiodic. For a finite-state Markov chain, being irreducible and aperiodic guarantees ergodicity.
-\end{definition}
-
-\begin{theorem}[Convergence to Stationary Distribution]
-For an ergodic, irreducible Markov chain, there exists a unique stationary distribution $\boldsymbol{\pi}$ such that:
-\[
-\lim_{n \to \infty} P^n = \mathbf{1} \boldsymbol{\pi}^T
-\]
-
-The stationary distribution satisfies:
-\[
-\boldsymbol{\pi}^T = \boldsymbol{\pi}^T P, \quad \sum_i \pi_i = 1
-\]
-
-Convergence is exponentially fast, with rate determined by the spectral gap (difference between the largest and second-largest eigenvalues).
-\end{theorem}
-
-\begin{remark}[Mean Recurrence Time and Ergodic Theorem]
-The mean recurrence time of state $i$ is:
-\[
-M_i = \mathbb{E}[R_i \mid S_0 = i] = \sum_{k=1}^{\infty} k P_i^{(k)} = \frac{1}{\pi_i}
-\]
-
-For an ergodic chain, $M_i < \infty$. The ergodic theorem states that the time-average converges to the ensemble average (the stationary distribution):
-\[
-\lim_{N \to \infty} \frac{1}{N} \sum_{t=1}^N f(S_t) = \mathbb{E}_{\pi}[f(S)] \text{ almost surely}
-\]
-\end{remark}
-
-\subsection{Importance Sampling with Unknown Normalizers}
-
-\begin{theorem}[Self-Normalized Importance Sampling]
-When we have unnormalized densities $\tilde{p}(x) = Z_p p(x)$ and $\tilde{q}(x) = Z_q q(x)$, we can compute the ratio of normalizers:
-\[
-\frac{Z_p}{Z_q} = \mathbb{E}_q\left[\frac{\tilde{p}(x)}{\tilde{q}(x)}\right]
-\]
-
-Thus, for expectations under $p$:
-\[
-\mathbb{E}_p[f(x)] \approx \frac{\sum_{i=1}^n f(x_i) \tilde{p}(x_i) / \tilde{q}(x_i)}{\sum_{i=1}^n \tilde{p}(x_i) / \tilde{q}(x_i)}
-\]
-
-The weights are normalized to sum to 1, making the method practical when normalizing constants are unknown.
-\end{theorem}
-
-\remark{Trade-off}
-Importance sampling is flexible but can be inefficient when the proposal distribution is far from the target, particularly in high dimensions. When weights are very imbalanced (some samples have very high weight while others have negligible weight), many samples are effectively wasted.
-
 % PAGE 9 CONTENT
 
 \section{Markov Random Fields and Graphical Models}
+
+Graphical models provide a powerful framework for representing complex dependencies in high-dimensional distributions through graphs, where nodes are variables and edges represent conditional dependencies. Markov Random Fields are a natural way to encode local structure in joint distributions, and energy-based models like the Ising and Potts models show how to design priors that capture spatial coherence and smoothness. This section develops these ideas and shows how Markov Random Fields enable both tractable inference and principled model design.
 
 \subsection{Neighbourhood Graphs and Random Fields}
 
@@ -1513,11 +1454,11 @@ The \textbf{Markov blanket} of vertex $\theta_i$ is:
 \end{definition}
 
 \begin{definition}[Markov Property]
-A random field has the \textbf{Markov property} if:
+A random field has the \textbf{Markov property} if each variable is conditionally independent of all other variables given its Markov blanket:
 \[
-p(c_i|s_{\backslash i}, j \in \partial(i)) = p(c_i|s_{\partial i}, j \in \partial(i))
+p(\theta_i \mid \boldsymbol{\theta}_{\setminus i}) = p(\theta_i \mid \boldsymbol{\theta}_{\partial i})
 \]
-Each variable $\theta_i$ is conditionally independent of the remaining field given its Markov blanket.
+where $\boldsymbol{\theta}_{\partial i}$ denotes the variables in the Markov blanket of $\theta_i$.
 \end{definition}
 
 \begin{definition}[Markov Random Field]
@@ -1645,15 +1586,19 @@ T(x' \to x) = g(x' \to x) A(x' \to x)
 
 To implement this:
 \begin{enumerate}
-    \item Generate $X^* \sim U[-1,1]$ and $U_i \sim \text{Unif}(0,1)$
-    \item If $U_i \leq A(x'|x)$, accept and set $X_{i+1} = x^*$
-    \item Otherwise, keep $X_{i+1} = X_i$
+    \item Sample a candidate $X^* \sim g(\cdot \mid x_t)$ from the proposal
+    \item Compute the acceptance ratio: $A(x_t \to x^*)$ 
+    \item Draw $u \sim \text{Unif}(0,1)$
+    \item If $u \leq A(x_t \to x^*)$, accept and set $X_{t+1} = x^*$
+    \item Otherwise, keep $X_{t+1} = X_t$ (reject the proposal)
 \end{enumerate}
 \end{definition}
 
 % PAGE 10 CONTENT
 
 \section{Advanced MCMC and Optimization Methods}
+
+With the Markov chain foundations established, we now develop practical MCMC algorithms (Gibbs sampling and Metropolis-Hastings) for inference in complex probabilistic models. We also cover optimization methods that complement sampling approaches. These techniques—including stochastic gradient descent, Newton's method, and interior point methods—form the computational core of modern unsupervised learning.
 
 \subsection{Stochastic Hill Climbing}
 
@@ -1724,17 +1669,21 @@ For each dimension $d \in \{1, \ldots, D\}$, the variables $X_{1,d}, X_{2,d}, \l
 These MH samplers all have \textbf{acceptance probability 1}.
 \end{definition}
 
-\begin{remark}[Theoretical Result on Gibbs]
-The conditional densities satisfy:
+\begin{remark}[Why Gibbs Sampling has Acceptance Probability 1]
+In Gibbs sampling, each step is a Metropolis-Hastings update with the full conditional distribution as the proposal. The acceptance ratio simplifies nicely:
+
 \[
-\pi(x \to x') = p(x_d | x_{\backslash d}), \quad p(x \to x') = p(x_d | x_d) = p(x_d | x_d) \text{ (rest didn't change when we sample } X_d \to X_d^*)
+A(x \to x') = \min\left(1, \frac{\pi(x') q(x \mid x')}{\pi(x) q(x' \mid x)}\right)
 \]
+
+where $q(x' \mid x) = p(x_d' \mid x_{\backslash d})$ and $q(x \mid x') = p(x_d \mid x_{\backslash d})$. 
+
+Both $\pi(x)$ and $\pi(x')$ factor as $\pi(x_d | x_{\backslash d}) p(x_{\backslash d})$, andthe proposal ratio becomes:
 \[
-\pi(x) = p(x_d, x_{\backslash d}) = p(x_d | x_{\backslash d}) p(x_{\backslash d}), \quad \pi(x') = p(x_d | x_{\backslash d}) p(x_{\backslash d})
+\frac{\pi(x') q(x \mid x')}{\pi(x) q(x' \mid x)} = \frac{p(x_d' | x_{\backslash d}) p(x_{\backslash d}) \cdot p(x_d | x_{\backslash d})}{p(x_d | x_{\backslash d}) p(x_{\backslash d}) \cdot p(x_d' | x_{\backslash d})} = 1
 \]
-\[
-\text{so ratio} \frac{\pi(x') \pi(x \to x')}{\pi(x) \pi(x \to x')} = \frac{p(x_d | x_{\backslash d}) p(x_{\backslash d}) p(x_d | x_d)}{p(x_d | x_{\backslash d}) p(x_{\backslash d}) p(x_d | x_d)} = 1
-\]
+
+Thus, every proposal is accepted with probability 1, making Gibbs sampling a \textbf{deterministic updating rule} at each coordinate given the current state of other coordinates.
 \end{remark}
 
 \begin{definition}[Gibbs on Ising Model]
