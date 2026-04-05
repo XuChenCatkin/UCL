@@ -14,9 +14,10 @@
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{proposition}{Proposition}[section]
 \newtheorem{lemma}{Lemma}[section]
+\newtheorem{remark}{Remark}[section]
 
-\title{COMP0083: Kernel Methods}
-\author{Lecture Notes}
+\title{COMP0083: Kernel Methods - Lecture Notes}
+\author{Comprehensive Course Notes}
 \date{}
 
 \begin{document}
@@ -25,1102 +26,569 @@
 \tableofcontents
 \newpage
 
-\section{Introduction to Kernels}
+\part{Foundations: Hilbert Spaces and Inner Products}
+
+\section{Motivation and Overview}
+
+Kernels are fundamental tools in machine learning that allow us to:
+\begin{itemize}
+    \item Compare objects based on their features without explicitly computing feature representations
+    \item Control model smoothness and generalization to avoid overfitting
+    \item Extend linear methods to non-linear settings through feature space transformations
+\end{itemize}
+
+The key insight is that many algorithms depend only on inner products between data points, which we can compute implicitly through a kernel function.
+
+\section{Inner Products and Norms}
+
+\subsection{Inner Product Spaces}
+
+\begin{definition}[Inner Product]
+Let $H$ be a vector space over $\mathbb{R}$. A function $\langle \cdot, \cdot \rangle_H : H \times H \to \mathbb{R}$ is an inner product if it satisfies:
 
 \begin{enumerate}
-    \item Kernels let us compare objects on the basis of features
-    \item Kernel methods can control smoothness and avoid overfitting/underfitting
+    \item \textbf{Linearity in the first argument:} 
+    \[
+    \langle \alpha f + \beta g, h \rangle_H = \alpha \langle f, h \rangle_H + \beta \langle g, h \rangle_H
+    \]
+    for all $\alpha, \beta \in \mathbb{R}$ and $f, g, h \in H$.
+    
+    \item \textbf{Symmetry:} $\langle f, g \rangle_H = \langle g, f \rangle_H$ for all $f, g \in H$.
+    
+    \item \textbf{Positive Definiteness:} $\langle f, f \rangle_H \geq 0$ for all $f \in H$, with equality if and only if $f = 0$.
 \end{enumerate}
+\end{definition}
 
-\section{Inner Product}
-
-Let $H$ be a vector space over $\mathbb{R}$. A function $\langle \cdot, \cdot \rangle_H : H \times H \to \mathbb{R}$ is an inner product if:
-
-\begin{enumerate}
-    \item[(i)] \textbf{Linear:} $\langle \alpha f, \beta g \rangle_H = \alpha \langle f, g \rangle_H + \alpha_2 \langle f_2, g \rangle_H$
-    \item[(ii)] \textbf{Symmetric:} $\langle f, g \rangle_H = \langle g, f \rangle_H$
-    \item[(iii)] $\langle f, f \rangle_H \geq 0$ and $\langle f, f \rangle_H = 0 \Leftrightarrow f = 0$ (positive definiteness)
-\end{enumerate}
-
+The inner product induces a norm on $H$:
 \[
 \|f\|_H := \sqrt{\langle f, f \rangle_H}
 \]
 
-\section{Inner Product on $\mathbb{R}^n$}
+\subsection{Norms on Vector Spaces}
 
-A function $\langle \cdot, \cdot \rangle : \mathbb{R}^n \times \mathbb{R}^n \to \mathbb{R}$ is an inner product on $\mathbb{R}^n$ if:
+\begin{definition}[Norm]
+Let $F$ be a vector space over $\mathbb{R}$. A function $\|\cdot\|_F : F \to [0, \infty)$ is a norm if it satisfies:
 
+\begin{enumerate}
+    \item \textbf{Separation of points:} $\|f\|_F = 0 \Leftrightarrow f = 0$
+    \item \textbf{Positive homogeneity:} $\|\lambda f\|_F = |\lambda| \|f\|_F$ for all $\lambda \in \mathbb{R}$ and $f \in F$
+    \item \textbf{Triangle inequality:} $\|f + g\|_F \leq \|f\|_F + \|g\|_F$ for all $f, g \in F$
+\end{enumerate}
+\end{definition}
+
+Every normed vector space carries an induced metric: $d(f, g) = \|f - g\|_F$. Conversely, every inner product space is a normed vector space with the norm induced by the inner product.
+
+\subsection{Inner Products on \texorpdfstring{$\mathbb{R}^n$}{Rn}}
+
+\begin{definition}[Inner Product on $\mathbb{R}^n$]
+A symmetric positive definite matrix $M \in \mathbb{R}^{n \times n}$ defines an inner product on $\mathbb{R}^n$:
 \[
-\exists \text{ symmetric positive definite matrix } M \text{ s.t. } \langle x, y \rangle = x^T M y \text{ for } \forall x, y \in \mathbb{R}^n
+\langle x, y \rangle_M := x^T M y \quad \text{for all } x, y \in \mathbb{R}^n
 \]
 
-For our product with $M = I$:
+The special case $M = I$ gives the standard Euclidean inner product: $\langle x, y \rangle = x^T y$.
+\end{definition}
 
+\section{Hilbert Spaces and Completeness}
+
+\subsection{Cauchy Sequences and Completeness}
+
+A sequence $\{f_n\}_{n=1}^{\infty}$ is Cauchy with respect to the induced metric if for every $\varepsilon > 0$, there exists $N$ such that for all $n, m > N$:
 \[
-\langle x, y \rangle = x^T y
+\|f_n - f_m\|_F < \varepsilon
 \]
 
-\section{Hilbert Space}
+Every convergent sequence is Cauchy, but not all Cauchy sequences converge. For example, the sequence $1, 1.4, 1.41, 1.414, \ldots$ is Cauchy in $\mathbb{Q}$ but converges (to $\sqrt{2}$) only in $\mathbb{R}$.
 
-A Hilbert space is an inner product space containing all Cauchy sequence limits.
+\begin{definition}[Complete Metric Space]
+A normed vector space $F$ is complete if every Cauchy sequence $\{f_n\}$ in $F$ converges to some $f \in F$ (i.e., $\lim_{n \to \infty} \|f_n - f\|_F = 0$).
+\end{definition}
 
-\section{Kernel Definition}
+\begin{definition}[Hilbert Space]
+A Hilbert space is a complete inner product space. That is, it is a vector space with an inner product where every Cauchy sequence converges.
 
+More formally, a Banach space is a complete normed vector space, while a Hilbert space is a complete inner product space.
+\end{definition}
+
+\subsection{Orthogonality and Orthonormal Basis}
+
+\begin{definition}[Orthogonal Complement]
+For a set $M \subseteq H$ in an inner product space, its orthogonal complement is:
+\[
+M^{\perp} := \{g \in H : \langle f, g \rangle = 0 \text{ for all } f \in M\}
+\]
+
+The orthogonal complement is always a closed linear subspace. If $M$ is a linear subspace, then $M \cap M^{\perp} = \{0\}$ (discrete intersection).
+\end{definition}
+
+\begin{definition}[Orthonormal Basis]
+An orthonormal basis of a Hilbert space $H$ is a family $\{e_k\}_{k \in B}$ of elements satisfying:
+
+\begin{enumerate}
+    \item \textbf{Orthogonality:} $\langle e_i, e_j \rangle = 0$ for all $i \neq j$
+    \item \textbf{Normalization:} $\|e_k\|_H = 1$ for all $k \in B$
+    \item \textbf{Completeness:} The linear span of $\{e_k\}$ is dense in $H$ (closedness condition)
+\end{enumerate}
+
+Such a basis allows every element $f \in H$ to be represented as:
+\[
+f = \sum_{k \in B} \langle f, e_k \rangle e_k
+\]
+with convergence in the Hilbert space norm.
+\end{definition}
+
+\subsection{Important Properties in Inner Product Spaces}
+
+\begin{theorem}[Cauchy-Schwarz Inequality]
+For any elements $f, g$ in an inner product space, we have:
+\[
+|\langle f, g \rangle| \leq \|f\| \|g\|
+\]
+with equality if and only if $f$ and $g$ are linearly dependent.
+\end{theorem}
+
+\begin{theorem}[Pythagorean Theorem]
+If $f \perp g$ (i.e., $\langle f, g \rangle = 0$), then:
+\[
+\|f + g\|^2 = \|f\|^2 + \|g\|^2
+\]
+\end{theorem}
+
+\begin{theorem}[Parallelogram Law]
+\[
+2\|f\|^2 + 2\|g\|^2 = \|f + g\|^2 + \|f - g\|^2
+\]
+\end{theorem}
+
+\section{Linear Operators}
+
+\subsection{Bounded and Continuous Operators}
+
+\begin{definition}[Linear Operator]
+A map $A: F \to G$ between vector spaces is a linear operator if:
+\[
+A(\alpha_1 f_1 + \alpha_2 f_2) = \alpha_1 A(f_1) + \alpha_2 A(f_2)
+\]
+for all scalars $\alpha_1, \alpha_2$ and elements $f_1, f_2 \in F$.
+\end{definition}
+
+When $G = \mathbb{R}$ (or $\mathbb{C}$), a linear operator is called a functional.
+
+\begin{definition}[Operator Norm]
+The operator norm of a bounded linear operator $A : F \to G$ is:
+\[
+\|A\| := \sup_{f \in F, f \neq 0} \frac{\|A f\|_G}{\|f\|_F} = \sup_{\|f\|_F \leq 1} \|A f\|_G
+\]
+
+If $\|A\| < \infty$, we say $A$ is a bounded linear operator.
+\end{definition}
+
+\begin{theorem}[Equivalence of Boundedness and Continuity]
+For a linear operator $A : F \to G$ between normed spaces, the following are equivalent:
+
+\begin{enumerate}
+    \item $A$ is a bounded operator
+    \item $A$ is continuous on all of $F$
+    \item $A$ is continuous at a single point in $F$
+\end{enumerate}
+\end{theorem}
+
+\subsection{The Riesz Representation Theorem}
+
+\begin{theorem}[Riesz Representation Theorem]
+Let $H$ be a Hilbert space and let $f : H \to \mathbb{R}$ be a bounded linear functional. Then there exists a unique $y \in H$ such that:
+\[
+f(x) = \langle x, y \rangle_H \quad \text{for all } x \in H
+\]
+Moreover, $\|f\|_{H'} = \|y\|_H$, where $\|f\|_{H'}$ is the operator norm of $f$ on the dual space.
+\end{theorem}
+
+\begin{remark}
+This theorem is fundamental: it says that every bounded linear functional on a Hilbert space can be represented as an inner product with some fixed vector. The mapping $J: H \to H'$ defined by $J(y)(x) = \langle x, y \rangle_H$ is an isometric isomorphism between $H$ and its dual space $H'$.
+\end{remark}
+
+\newpage
+\part{Kernels and Reproducing Kernel Hilbert Spaces}
+
+\section{Kernels: Definition and Properties}
+
+\subsection{Kernel Definition and Positive Definiteness}
+
+\begin{definition}[Kernel]
 Let $X$ be a non-empty set. A function $k : X \times X \to \mathbb{R}$ is a kernel if there exists a Hilbert space $H$ and a feature map $\phi : X \to H$ such that:
-
 \[
-k(x, x') = \langle \phi(x), \phi(x') \rangle_H
+k(x, x') = \langle \phi(x), \phi(x') \rangle_H \quad \text{for all } x, x' \in X
 \]
+\end{definition}
 
-\section{Key Properties of Kernels}
+Equivalently, a kernel can be characterized through positive definiteness.
+
+\begin{definition}[Positive Definite Kernel]
+A function $k : X \times X \to \mathbb{R}$ is positive definite if for any finite set of points $\{x_1, \ldots, x_n\} \subseteq X$ and coefficients $\{c_1, \ldots, c_n\} \subseteq \mathbb{R}$:
+\[
+\sum_{i,j=1}^{n} c_i c_j k(x_i, x_j) \geq 0
+\]
+\end{definition}
+
+The key insight is that kernels and positive definite functions are equivalent concepts.
+
+\subsection{Constructing Kernels}
+
+\begin{proposition}[Operations Preserving Kernels]
+The following operations preserve the kernel property:
 
 \begin{enumerate}
-    \item A single kernel can correspond to several possible features.
+    \item \textbf{Positive scaling:} If $k$ is a kernel and $\alpha > 0$, then $\alpha k$ is a kernel.
     
-    \item \textbf{Sums of kernels are kernels:} Given $\alpha > 0$, $k, k_2, k_3$ are kernels on $X$, then $\alpha k$ and $k_1 + k_2$ are kernels on $X$.
+    \item \textbf{Sums of kernels:} If $k_1$ and $k_2$ are kernels on $X$, then $k_1 + k_2$ is a kernel on $X$.
     
-    \item A difference of kernels may not be a kernel.
+    \item \textbf{Products of kernels:} If $k_1$ is a kernel on $X_1$ and $k_2$ is a kernel on $X_2$, then the product 
+    \[
+    k(x, x') := k_1(x_1, x_1') \cdot k_2(x_2, x_2')
+    \]
+    is a kernel on $X_1 \times X_2$.
     
-    \item \textbf{Mappings between spaces:} Let $X$ and $\tilde{X}$ be sets and a map $A : X \to \tilde{X}$. Define kernel on $\tilde{X}$. Then $k(A(x), A(x'))$ is a kernel on $X$.
-    
-    \item \textbf{Products of kernels are kernels:} Given $k_1$ on $X_1$ and $k_2$ on $X_2$, then $k_1 \times k_2$ is a kernel on $X_1 \times X_2$. If $X_1 = k_1 = X$, then $k := k_1 \times k_2$ is a kernel on $X$.
+    \item \textbf{Kernel composition:} If $A: X \to \tilde{X}$ is a map and $\tilde{k}$ is a kernel on $\tilde{X}$, then $k(x, x') := \tilde{k}(A(x), A(x'))$ is a kernel on $X$.
 \end{enumerate}
+\end{proposition}
 
-\section{Frobenius Inner Product}
+\begin{remark}
+Not all differences of kernels are kernels. Additionally, a single kernel can admit infinitely many different feature map representations.
+\end{remark}
 
+\subsection{Examples of Kernels}
+
+\begin{definition}[Polynomial Kernel]
+The polynomial kernel of degree $d$ is defined as:
 \[
-\langle A, B \rangle_F = \sum_{ij} A_{ij} B_{ij} = \text{tr}(A^T B), \quad A^* \text{ is conjugate-transpose of } A
+k(x, x') := (\langle x, x' \rangle + c)^d
+\]
+where $d$ is a positive integer and $c \geq 0$ is a constant. This kernel corresponds to the feature space of all monomials of degree up to $d$ in the original features.
+\end{definition}
+
+\begin{definition}[Gaussian (RBF) Kernel]
+The Gaussian or Radial Basis Function (RBF) kernel is:
+\[
+k(x, x') := \exp\left( -\gamma \|x - x'\|^2 \right)
+\]
+where $\gamma > 0$ is the bandwidth parameter. This kernel is universal and characteristic for probability measures.
+\end{definition}
+
+\begin{definition}[Kernels from Power Series]
+For $r \in (0, \infty]$ and coefficients $\{a_n\}_{n=0}^{\infty}$ with $a_n \geq 0$, if the radius of convergence allows, we can define:
+\[
+k(x, x') := \sum_{n=0}^{\infty} a_n \langle x, x' \rangle^n
+\]
+for $\langle x, x' \rangle \in (-r, r)$.
+\end{definition}
+
+\section{Reproducing Kernel Hilbert Spaces (RKHS)}
+
+\subsection{Evaluation Functionals}
+
+\begin{definition}[Evaluation Functional]
+Given a space $H$ of functions $f: X \to \mathbb{R}$ and a fixed point $x_0 \in X$, the evaluation functional at $x_0$ is:
+\[
+E_{x_0} : H \to \mathbb{R}, \quad E_{x_0}(f) := f(x_0)
 \]
 
-\section{Polynomial Kernel}
+This is a linear functional, but it is not always bounded with respect to every norm on $H$.
+\end{definition}
 
+\subsection{RKHS Definition}
+
+\begin{definition}[Reproducing Kernel Hilbert Space]
+A Hilbert space $H$ of functions $f: X \to \mathbb{R}$ is a Reproducing Kernel Hilbert Space (RKHS) if for every $x \in X$, the evaluation functional $E_x : H \to \mathbb{R}$ defined by $E_x(f) = f(x)$ is bounded.
+
+Equivalently, there exists a family $\{k_x\}_{x \in X} \subseteq H$ such that:
 \[
-k(x, x') := (\langle x, x' \rangle + c)^m
+f(x) = \langle f, k_x \rangle_H \quad \text{for all } x \in X, \, f \in H
 \]
 
-where $m$ must be an integer and $m \geq 1$, $c \geq 0$.
+where $k_x(y) = k(y, x)$ and $k: X \times X \to \mathbb{R}$ is the reproducing kernel.
+\end{definition}
 
-\section{Convergence Radius}
-
-For $r \in (0, \infty]$, with $a_n \geq 0$ for all $n \geq 0$:
-
-\[
-f(z) = \sum_{n=0}^{\infty} a_n z^n, \quad |z| < r, \quad z \in \mathbb{R}
-\]
-
-Define $X_0$ to be the $\sqrt{r}$-ball in $\mathbb{R}^d$, so $\|x\| < \sqrt{r}$:
-
-\[
-k(x, x') = f(\langle x, x' \rangle) = \sum_{n=0}^{\infty} a_n \langle x, x' \rangle^n
-\]
-
-\section{Sequence Spaces}
-
-The space $\ell_2$ comprises all sequences $a := \{a_i\}_{i>1}$ for which:
-
-\[
-\|a\|_{\ell_2}^2 = \sum_{i=1}^{\infty} a_i^2 < \infty
-\]
-
-\newpage
-
-\section{Properties of Kernels and Positive Definiteness}
-
-\begin{enumerate}
-    \item Kernels are positive definite. Reverse also holds.
-\end{enumerate}
-
-\subsection{Norm}
-
-Let $F$ be a vector space over the field $\mathbb{R}$ (or $\mathbb{C}$). A function $\|\cdot\|_F : F \to [0, \infty)$ is said to be a norm if:
-
-\begin{enumerate}
-    \item[(i)] $\|f\|_F = 0 \Leftrightarrow f = 0$ (norm separates points)
-    \item[(ii)] $\|\lambda f\|_F = |\lambda| \|f\|_F$, $\forall \lambda \in \mathbb{R}$, $\forall f \in F$ (positive homogeneity)
-    \item[(iii)] $\|f + g\|_F \leq \|f\|_F + \|g\|_F$, $\forall f, g \in F$ (triangle inequality)
-\end{enumerate}
-
-In every normed vector space, one can define a metric induced by the norm: $d(f, g) = \|f - g\|_F$.
-
-In every inner product vector space, one can define a norm induced by the inner product:
-
-\[
-\|f\|_F = \langle f, f \rangle_F^{1/2}
-\]
-
-\subsection{Orthogonal Complement}
-
-The orthogonal complement of $M$: $M^{\perp} = \{g \in F : \langle f, g \rangle = 0, \forall f \in M\}$
-
-$M^{\perp}$ is a linear subspace of $F$; $M \cap M^{\perp} = \{0\}$.
-
-\subsection{Key Relations in Inner Product Space}
-
-\begin{enumerate}
-    \item \textbf{Cauchy-Schwarz inequality:} $|\langle f, g \rangle| \leq \|f\|_F \|g\|_F$
-    
-    \item \textbf{Parallelogram law:} $2\|f\|_F^2 + 2\|g\|_F^2 = \|f + g\|_F^2 + \|f - g\|_F^2$
-    
-    \item \textbf{Polarization identity:} $4\langle f, g \rangle = \|f + g\|_F^2 - \|f - g\|_F^2$
-    
-    \item \textbf{Pythagorean theorem:} $f \perp g \Rightarrow \|f\|_F^2 + \|g\|_F^2 = \|f + g\|_F^2$
-\end{enumerate}
-
-\subsection{Convergence and Cauchy Sequences}
-
-From $\|f_n - f_m\|_F \leq \|f_n - f\|_F + \|f - f_m\|_F$, we get: Convergent $\Rightarrow$ Cauchy, Cauchy $\Rightarrow$ Convergent?
-
-Example: $1, 1.4, 1.41, 1.414, 1.4142, \ldots$ is Cauchy in $\mathbb{Q}$ which does not converge because $\sqrt{2} \notin \mathbb{Q}$.
-
-\subsection{Complete Metric Spaces}
-
-A metric space $F$ is said to be complete if every Cauchy sequence $\{f_n\}_{n=1}^{\infty}$ in $F$ converges: it has limit and this limit is in $F$, i.e., one can find $f \in F$ s.t. $\lim \|f_n - f\|_F = 0$.
-
-\begin{center}
-\textbf{Complete + Norm = Banach} \quad \textbf{Complete + Inner product = Hilbert}
-\end{center}
-
-\subsection{Closed vs. Complete}
-
-\textbf{Closed v.s. Complete:} Closed: $M \subseteq F$ is closed in $F$ $\Leftrightarrow$ it contains limits of all sequences in $M$ that converge in $F$.
-
-Complete: $M$ is complete if all Cauchy sequence in $M$ converge in $M$.
-
-\subsection{Linear Operators}
-
-\textbf{Linear operator:} $A: F \to G$, where $F$ and $G$ are both vector spaces over $\mathbb{R}$. $A$ is said to be a linear operator if:
-
-\[
-A(\alpha_1 f_1 + \alpha_2 f_2) = \alpha_1 A(f_1) + \alpha_2 A(f_2), \quad \forall \alpha_1, \alpha_2 \in \mathbb{R}, \quad f_1, f_2 \in F
-\]
-
-Operators with $G = \mathbb{R}$ are called \textbf{functionals}.
-
-\subsection{Operator Norm}
-
-\textbf{Operator norm:} The operator norm of a linear operator $A : F \to G$ is defined as:
-
-\[
-\|A\| = \sup_{f \in F} \frac{\|A f\|_G}{\|f\|_F}
-\]
-
-If $\|A\| < \infty$, $A$ is called a \textbf{bounded linear operator}. $\|A\|$ is the smallest number $\lambda$ s.t. the inequality $\|A f\|_G \leq \lambda \|f\|_F$ holds for all $f \in F$.
-
-\subsection{Continuity}
-
-\textbf{Continuity:} $A: F \to G$, where $F$ and $G$ are both normed vector spaces over $\mathbb{R}$. $A$ is said to be continuous at $f_0 \in F$, if $\forall \varepsilon \geq 0$, $\exists \delta = S(\varepsilon, f_0) > 0$, s.t.
-
-\[
-\|f - f_0\|_F < \delta \Rightarrow \|A f - A f_0\|_G < \varepsilon
-\]
-
-$A$ is said to be continuous on $F$ if it is continuous at every point of $F$.
-
-Example: For $g \in F$, $A_g : F \to \mathbb{R}$ defined with $A_g(f) = \langle f, g \rangle_F$ is continuous on $F$.
-
-$|A_g f_1 - A_g f_2| = |\langle f_1 - f_2, g \rangle| \leq \|g\|_F \|f_1 - f_2\|_F$, so take $\delta = \frac{\varepsilon}{\|g\|_F}$ (also Lipschitz?)
-
-\newpage
-
-\section{Continuous and Bounded Operators}
-
-\begin{enumerate}
-    \item \textbf{Continuous function:} $A: F \to G$ maps to open (closed) sets from open (closed) sets.
-    
-    \item \textbf{Bounded linear operator:} $A : F \to G$ maps bounded sets to bounded sets.
-    
-    \item \textbf{Continuous operator = Bounded operator:} Let $(F, \|\cdot\|_F)$ and $(G, \|\cdot\|_G)$ be normed linear spaces. If $L$ is a linear operator, then the following three conditions are equivalent:
-    \begin{enumerate}
-        \item[(i)] $L$ is bounded operator
-        \item[(ii)] $L$ is continuous on $F$
-        \item[(iii)] $L$ is continuous at one point of $F$
-    \end{enumerate}
-\end{enumerate}
-
-\section{Riesz Representation Theorem}
-
-Let $H$ be a Hilbert space and let $f : H \to \mathbb{F}$ be a bounded linear functional. Then $\exists! y \in H$ s.t.
-
-\[
-f(x) = \langle x, y \rangle_H \quad \forall x \in H \quad \text{and} \quad \|f\| = \|y\|_H
-\]
-
-Every continuous linear score is just a dot-product with some hidden vector.
-
-$f \in H'$ (continuous dual of $H$), $\tilde{F} := \{f : H \to \mathbb{F} \mid f \text{ is linear and } \|f\|_{H'} = \sup\frac{\|f\|}{\|x\|_H}\}$.
-
-The Riesz isomorphism is the mapping $J: H \to H'$, $J(y)(x) = \langle x, y \rangle_H$, and it is bijective and norm-preserving ($\|f\|_H = \|y\|_H$), so it is isometric isomorphism.
-
-\section{Evaluation Functional}
-
-Given a space of functions $X$ and a fixed point $t_0$ in the domain, the evaluation functional at $t_0$ : $E_{t_0} : X \to \mathbb{F}$, $E_{t_0}(f) = f(t_0)$.
-
-It is linear but not always bounded.
-
-\section{Reproducing Kernel Hilbert Space}
-
-Reproducing kernel Hilbert Space $\Leftrightarrow$ every evaluation functional $E_x: H \to \mathbb{F}$, $E_x(f) = f(x)$, is bounded with respect to norm of $H$.
-
-Bounded evaluations $\Rightarrow$ Reproducing kernel: Because $E_x \in H'$ is bounded, from Riesz, $\exists k(\cdot, x) = k_x \in H$ s.t. $f(x) = E_x(f) = \langle f, k(\cdot, x) \rangle_H$ $\forall f \in H$.
-
-The function $k : X \times X \to \mathbb{F}$, $k(x, y) := k_y(x) = \langle k_y, k_x \rangle_H$, is called \textbf{reproducing kernel}.
-
-\textbf{Property:} $f(x) = \langle f, k(\cdot, x) \rangle_H$ is the \textbf{reproducing property}.
-
-Reproducing kernel $\Rightarrow$ bounded evaluation.
+This definition encodes the \textbf{reproducing property}: function values can be recovered via inner products with kernel sections.
 
 \subsection{Moore-Aronszajn Theorem}
 
-If $k$ is positive-definite on $X \times X$, $\exists!$ RKHS $H_k$ where kernel is $k$ s.t.
+\begin{theorem}[Moore-Aronszajn]
+There is a one-to-one correspondence between positive definite kernels on $X \times X$ and Reproducing Kernel Hilbert Spaces on $X$. 
 
+Specifically, for every positive definite kernel $k$ on $X \times X$, there exists a unique RKHS $H_k$ with reproducing kernel $k$. Conversely, every RKHS has a unique reproducing kernel.
+
+The RKHS $H_k$ is the completion of the pre-Hilbert space spanned by $\{k_x\}_{x \in X}$ with inner product:
 \[
-f(x) = \langle f, k(\cdot, x) \rangle_{H_k}, \quad \forall f \in H_k, \quad x \in X
+\left\langle \sum_i \alpha_i k_{x_i}, \sum_j \beta_j k_{x_j} \right\rangle_{H_k} := \sum_{i,j} \alpha_i \beta_j k(x_i, x_j)
+\]
+\end{theorem}
+
+Key consequences:
+\begin{itemize}
+    \item Every positive definite kernel defines a unique RKHS
+    \item The feature map $\phi(x) = k(\cdot, x)$ embeds $X$ into $H_k$
+    \item The kernel value is $k(x, x') = \langle \phi(x), \phi(x') \rangle_{H_k}$
+\end{itemize}
+
+\subsection{Properties of RKHS and Smoothness}
+
+\begin{proposition}[Smoothness from Small RKHS Norm]
+If $f \in H_k$ with small $\|f\|_{H_k}$, then $f$ is smooth. Specifically:
+\[
+|f(x) - f(x')| = |\langle f, k_x - k_{x'} \rangle| \leq \|f\|_{H_k} \|k_x - k_{x'}\|_{H_k}
 \]
 
-$|f(x)| \leq \|f\|_{H_k} \|k(\cdot, x)\|_{H_k}$ and hence $E_x$ is bounded.
+For smooth kernels, $\|k_x - k_{x'}\|_{H_k}$ is small when $x$ is close to $x'$.
+\end{proposition}
 
-\section{Properties of Reproducing Kernels}
+\section{Spectral Properties and Function Representations}
 
-\begin{enumerate}
-    \item \textbf{Reproducing kernel is unique and RKHS:} It is a reproducing kernel Hilbert space $\Leftrightarrow$ it has reproducing kernel.
-    
-    \item \textbf{Every reproducing kernel is a kernel:} We can take $\phi : x \mapsto k(\cdot, x)$, $k(x, y) = \langle k(\cdot, x), k(\cdot, y) \rangle_{H_k}$, i.e., $\mathbb{RHS} H$ is a feature space.
-\end{enumerate}
+\subsection{Integral Linear Operators and Mercer's Theorem}
 
-\newpage
-
-\section{Orthonormal Basis}
-
-In Hilbert space $H$, an orthonormal basis is a family $\{e_k\}_{k \in B}$ of elements of $H$ satisfying:
-
-\begin{enumerate}
-    \item[(i)] \textbf{Orthogonality:} $\langle e_i, e_j \rangle = 0$ $\forall i, j \in B$ with $i \neq j$
-    \item[(ii)] \textbf{Normalization:} $\|e_k\|_H = 1$ for $b \in B$
-    \item[(iii)] \textbf{Completeness:} linear span of family $\{e_k, k \in B\}$ is dense in $H$
-\end{enumerate}
-
-\section{Spectral Theorem}
-
-Let $X$ be a compact metric space and $k : X \times X \to \mathbb{R}$ a continuous kernel. Define
-
+\begin{definition}[Integral Operator]
+Given a kernel $k$ and a measure $\nu$ on $X$, the integral operator is:
 \[
-H = \left\{ f = \sum_{j \in J} a_j e_j : \left\{ \frac{a_j}{\sqrt{\lambda_j}} \in \ell^2(J) \right\} \right\} \quad \text{with inner product:}
+(T_k f)(x) := \int_X k(x, y) f(y) \, d\nu(y)
+\]
+This is a linear operator mapping appropriate function spaces.
+\end{definition}
+
+\begin{theorem}[Mercer's Theorem]
+Let $k$ be a continuous kernel on a compact metric space $X$, and let $\nu$ be a finite Borel measure with $\text{supp}(\nu) = X$. Then $k$ admits an eigenfunction expansion:
+\[
+k(x, y) = \sum_{j=1}^{\infty} \lambda_j e_j(x) e_j(y)
 \]
 
+where $\lambda_1 \geq \lambda_2 \geq \ldots \geq 0$ are eigenvalues of the integral operator $T_k$ and $\{e_j\}$ are the corresponding orthonormal eigenfunctions. The series converges absolutely and uniformly on $X \times X$.
+\end{theorem}
+
+\subsection{Spectral Theorem and Decomposition}
+
+\begin{theorem}[Spectral Decomposition]
+Let $H$ be a Hilbert space and $T: H \to H$ a compact, self-adjoint operator. Then there exists an at-most countable orthonormal set $\{e_j\}_{j \in J}$ and eigenvalues $\lambda_1 \geq \lambda_2 \geq \ldots$ converging to zero, such that:
 \[
-\left\langle \sum_{j \in J} a_j e_j, \sum_{b \in J} b_j e_j \right\rangle_H = \sum_{j \in J} \frac{a_j b_j}{\lambda_j}
+f = \sum_{j \in J} \langle f, e_j \rangle e_j \quad \text{and} \quad T f = \sum_{j \in J} \lambda_j \langle f, e_j \rangle e_j
 \]
+for all $f \in H$.
+\end{theorem}
 
-Then $H = H_k$.
-
-\section{Spectral Decomposition}
-
-Let $F$ be a Hilbert space, and $T : F \to F$ a compact, self-adjoint operator. There is an at most countable orthonormal set (CONS) $\{e_j\}_{j \in J}$ of $F$ and $\{\lambda_j\}_{j \in J}$ with $|\lambda_1| > |\lambda_2| > \ldots > 0$ converging to $0$, such that
-
-\[
-f = \sum_{j \in J} \langle f, e_j \rangle e_j \quad \text{and} \quad T f = \sum_{j \in J} \lambda_j \langle f, e_j \rangle e_j, \quad f \in F
-\]
-
-\section{Integral Linear Operator}
-
-\[
-(K f)(x) = \int_X f(y) K(x, y) \, dy
-\]
-
-It is linear because $[K(\alpha f_1 + \beta f_2)](x) = \alpha [Kf_1](x) + \beta [Kf_2](x)$.
-
-\section{Mercer's Theorem}
-
-Let $k$ be a continuous kernel on compact metric space $X$, and let $\nu$ be a finite Borel measure on $X$ with $\text{supp}(\nu) = X$. Then $\forall x, y \in X$:
-
-\[
-k(x, y) = \sum_{j \in J} \lambda_j e_j(x) e_j(y)
-\]
-
-\{$\lambda_j e_j$\} and $\{e_j\}_{j \in J}$ are eigenvalues and eigenfunctions of $T_{k,\nu}$ on the RKHS, and the convergence of sum is uniform on $X \times X$ and absolute for each pair $(x, y) \in X \times X$.
-
-\[
-k(x, y) = \sum_{j \in J} \lambda_j e_j(x) e_j(y) = \langle \sqrt{\lambda_j} e_j(x), \sqrt{\lambda_j} e_j(y) \rangle_u
-\]
-
-\section{Alternative Formulation}
-
-Item 43 can be viewed in a different way:
-
-Rescale the eigenfunctions: $\varphi_j := \sqrt{\lambda_j} e_j$ and $\langle \varphi_i, \varphi_j \rangle_H = \delta_{ij}$, so $\langle e_i, e_j \rangle_H = \frac{\delta_{ij}}{\lambda_j}$.
-
-$M$ is Gram matrix of the original eigenfunctions $\{e_j\}$ in the RKHS.
-
-So any function $f(x) = \sum f_n e_n(x) = \sum \frac{\hat{f}_n}{\sqrt{\lambda_n}} \varphi_n(x)$
-
-\[
-\|f\|_H^2 = \sum \frac{|\hat{f}_n|^2}{\lambda_n}
-\]
-
-For the evaluation functional $E_x(f) = f(x)$, Cauchy-Schwarz gives:
-
-\[
-|f(x)|^2 = \left| E_x(f) \right|^2 \leq \left( \sum \frac{\hat{f}_n^2}{\lambda_n} \right) \left( \sum \|e_n\|_H^2 k(x, x) \right) = \|f\|_H^2 k(x, x)
-\]
-
-For $E_x$ bounded, we need $\left\{ \frac{|f_n|}{\sqrt{\lambda_n}} \right\} \in \ell^2(J)$ and $k(x, x) < \infty$.
-
-For other ordinary dot product in $L_2$, $\lambda_n = 1 \Rightarrow$ the series diverges $\Rightarrow$ unbounded $\Rightarrow$ not RKHS.
-
-\section{Infinite Feature Space via Fourier Series}
-
-\[
-k(x, y) = \sum_{j \in J} \lambda_j e_j(x) e_j(y) = \sum_{j \in J} \lambda_j \exp(i \omega_j (x - y))
-\]
-
-which is translation invariant.
-
-\section{Eigenvalues and Eigenfunctions}
-
-Since $\{\lambda_j\}_{j \in J}$ and $\{e_j\}_{j \in J}$ are eigenvalues and eigenfunctions of $T_k$, then we have:
-
-\[
-T_k e_j(x) = \int e_j(y) k(x, y) \, \nu(y) dy = \int e_j(y) \sum_{j'} \lambda_{j'} e_{j'}(x) e_{j'}(y) \, \nu(y) dy = \lambda_j e_j(x)
-\]
+This allows us to represent any function in $H_k$ and understand the decay of the spectrum.
 
 \newpage
+\part{Applications of Kernels}
 
-\section{Small RKHS Norm and Smooth Functions}
+\section{Kernel Methods in Machine Learning}
 
-Small RKHS norm results in smooth functions.
+\subsection{Representer Theorem}
 
-\subsection{Two Functions Identical in RKHS Norm}
-
-Two functions identical in RKHS norm agree at every point:
-
+\begin{theorem}[Representer Theorem]
+Consider a regularized empirical risk minimizer:
 \[
-|f(x) - g(x)| = |E_x(f - g)| = |\langle f - g, k_x \rangle_H| \leq \|f - g\|_H \|k_x\|_H = 0
+\min_{f \in H_k} \frac{1}{n} \sum_{i=1}^{n} L(y_i, f(x_i)) + \lambda \|f\|_{H_k}^2
 \]
 
+where $L$ is any loss function and $\lambda > 0$. The optimal solution has the form:
 \[
-\|k_x\|_H = \langle k(\cdot, x), k(\cdot, x) \rangle_H^{\frac{1}{2}} = k(x, x)^{\frac{1}{2}}
+f^*(x) = \sum_{i=1}^{n} \alpha_i^* k(x, x_i)
 \]
 
-\subsection{Distance Between Means in Feature Space}
+That is, the optimal function is expressible as a linear combination of kernel evaluations at the training points.
+\end{theorem}
 
+This is why kernel methods are computationally practical: we only need to optimize over $n$ coefficients rather than solving in infinite-dimensional spaces.
+
+\subsection{Kernel Ridge Regression}
+
+\begin{definition}[Kernel Ridge Regression]
+Kernel Ridge Regression solves:
 \[
-\left\| \frac{1}{m} \sum_{i=1}^m \phi(x_i) - \frac{1}{n} \sum_{j=1}^n \phi(y_j) \right\|_H^2 \quad \to \, \text{distance between their means in feature space}
+\min_{f \in H_k} \frac{1}{n} \sum_{i=1}^{n} (y_i - f(x_i))^2 + \lambda \|f\|_{H_k}^2
 \]
 
-When $\phi(x) = x$, distinguish means. When $\phi(x) = Lx x^2$, distinguish means and variances.
-
-\section{Principal Component Analysis (PCA)}
-
-PCA: First principal component (max. variance)
-
+By the representer theorem, the solution is:
 \[
-u_1 = \arg\max_{\|u\|=1} \frac{1}{n} \sum_{i=1}^n \left( u^T \left( x_i - \frac{1}{n} \sum_{j=1}^n x_j \right) \right)^2 = \arg\max_{\|u\|=1} u^T C u
+f^*(x) = \sum_{i=1}^{n} \alpha_i^* k(x, x_i)
 \]
 
-where
+where $\boldsymbol{\alpha}^* = (K + n\lambda I)^{-1}\mathbf{y}$ and $K$ is the kernel matrix with entries $K_{ij} = k(x_i, x_j)$.
+\end{definition}
 
+\section{Kernel Mean Embeddings}
+
+\subsection{Definition and Properties}
+
+\begin{definition}[Kernel Mean Embedding]
+For a probability measure $P$ on $\mathcal{X}$ and kernel $k$, the kernel mean embedding is:
 \[
-C = \frac{1}{n} \sum_{i=1}^n \left( x_i - \frac{1}{n} \sum_{j=1}^n x_j \right) \left( x_i - \frac{1}{n} \sum_{j=1}^n x_j \right)^T = \frac{1}{n} X H X^T, \quad X = [x_1 \ldots x_n]^T
+\mu_P := \mathbb{E}_{X \sim P}[k(\cdot, X)] = \int k(\cdot, x) \, dP(x) \in H_k
 \]
 
+For an empirical measure $P_n = \frac{1}{n}\sum_{i=1}^{n} \delta_{x_i}$, the empirical mean embedding is:
 \[
-H = I - \frac{1}{n} \mathbf{1}_{n \times n} \quad \text{where } \mathbf{1}_{n \times n} \text{ is a matrix of ones}
+\hat{\mu}_{P_n} := \frac{1}{n} \sum_{i=1}^{n} k(\cdot, x_i)
+\]
+\end{definition}
+
+Mean embeddings map probability distributions to function space, preserving distributional information.
+
+\begin{proposition}[Injectivity for Characteristic Kernels]
+A kernel $k$ is called characteristic for probability measures on $\mathcal{X}$ if the embedding $P \mapsto \mu_P$ is injective. That is:
+\[
+\mu_P = \mu_Q \implies P = Q
 \]
 
-If $C = Q \Lambda Q^T$, then $u^T C u = (Q^T u)^T \Lambda (Q^T u) = \sum_i \lambda_i \tilde{u}_i^2 \leq \lambda_{\max} \sum_i \tilde{u}_i^2$
+The Gaussian kernel and many translation-invariant kernels with full support are characteristic.
+\end{proposition}
 
-where $\tilde{u} = Q^T u$ are the coordinates of $u$ in the eigenbasis. If $\|u\|^2 = 1$, then $\|\tilde{u}\|^2 = u^T Q Q^T u = u^T u = 1$.
+\section{Maximum Mean Discrepancy (MMD)}
 
-\section{Kernel PCA}
+\subsection{Definition}
 
+\begin{definition}[Maximum Mean Discrepancy]
+The MMD between two probability measures $P$ and $Q$ with a kernel $k$ is:
 \[
-f_1 = \arg\max_{\|f\|_H \leq 1} \frac{1}{n} \sum_{i=1}^n \left( \langle f, \phi(x_i) \rangle_H - \frac{1}{n} \sum_{j=1}^n \langle f, \phi(x_j) \rangle_H \right)^2
+\text{MMD}_k(P, Q) := \|\mu_P - \mu_Q\|_{H_k}
 \]
 
+Equivalently:
 \[
-= \arg\max_{\|f\|_H \leq 1} \frac{1}{n} \sum_{i=1}^n \left( f(x_i) - \frac{1}{n} \sum_{j=1}^n f(x_j) \right)^2 = \arg\max_{\|f\|_H \leq 1} \frac{1}{n} \sum_{i=1}^n (f(x_i) - \hat{f}(i))^2 = \arg\max_{\|f\|_H \leq 1} \text{Var}(f)
+\text{MMD}_k^2(P, Q) = \mathbb{E}_{x,x' \sim P}[k(x, x')] - 2\mathbb{E}_{x \sim P, y \sim Q}[k(x, y)] + \mathbb{E}_{y,y' \sim Q}[k(y, y')]
+\]
+\end{definition}
+
+MMD provides a metric on the space of probability measures via an RKHS.
+
+\subsection{Witness Function and Interpretation}
+
+The function that witnesses the maximum discrepancy—the one that achieves the supremum in the definition—is the normalized difference of mean embeddings:
+\[
+f^*(x) = \frac{\mu_P(x) - \mu_Q(x)}{\|\mu_P - \mu_Q\|_{H_k}}
 \]
 
-We can write $f = \sum_{i=1}^n \left( \phi(x_i) - \frac{1}{n} \sum_{j=1}^n \phi(x_j) \right) = \sum_{i=1}^n \alpha_i \tilde{\phi}(x_i)$ since any orthogonal component contributes.
+This function shows where the distributions differ most in the feature space.
 
-Define infinite dimensional analog of covariance: $C = \frac{1}{n} \sum_{i=1}^n \tilde{\phi}(x_i) \otimes \tilde{\phi}(x_i)$, where $\tilde{\phi}(x_i)$ is demeaned features, $\otimes$ is outer product.
+\subsection{Two-Sample Testing with MMD}
 
-with trick $(A \otimes b) c := \langle b, c \rangle_H a$:
+\begin{proposition}[Hypothesis Testing]
+Under the null hypothesis $H_0: P = Q$, the statistic MMD$_k^2(P_n, Q_m)$ converges to 0. The asymptotic distribution can be derived for test construction.
 
-\[
-C f^T = \frac{1}{n} \sum_{i,j} \tilde{\phi}(x_i) \left( \langle x_j \in E(x_i, x_j) \rangle \right), \quad \tilde{K} = H K H \quad \text{since } \tilde{K} = H^T X^T X H = H^T E H = HEH
-\]
-
-project $f_i \alpha = C f_i$ and $\tilde{\phi}(x_i) \Rightarrow n\lambda_i \tilde{\alpha}_i = \tilde{K} \tilde{\alpha}_i \Rightarrow n\lambda_i \alpha = K \alpha$
-
-$\|f\|_H^2 = \alpha^T \tilde{K} \alpha = n \lambda \|\alpha\|^2$, so to make it unit norm, we scale $\alpha \in \alpha / \sqrt{n \lambda}$.
-
-\section{Ridge Regression}
-
-\[
-X = [x_1, \ldots, x_n]^T \in \mathbb{R}^{p \times n}, \quad y := [y_1, \ldots, y_n]^T
-\]
-
-\[
-\alpha^* = \arg\min_{\alpha} \left( \sum_{i=1}^n (y_i - \alpha^T x_i)^2 + \lambda \|\alpha\|^2 \right) = \arg\min_{\alpha \in \mathbb{R}^p} \left( \|y - X^T \alpha\|^2 + \lambda \|\alpha\|^2 \right)
-\]
-
-\[
-\alpha^* = (XX^T + \lambda I)^{-1} Xy = X(X^T X + \lambda I)^{-1} y
-\]
-
-So solution is in form of $\alpha^* = \sum_{i=1}^n \alpha_i^* x_i$.
-
-Perform SVD on $X$: $X = USV^T$, with $U = [u_1, \ldots, u_c]$, $S = [\sigma_1, \sigma_2, \ldots]^T$, $V = [v_1, \ldots, v_n]^T$, $U^T U = UU^T = I_c$, $V^T V = VV^T = I_n$.
-
-\section{Kernel Ridge Regression}
-
-\[
-\alpha^* = \arg\min_{\alpha} \left( \sum_{i=1}^n (y_i - \langle \alpha, \phi(x_i) \rangle_H)^2 + \lambda \|\alpha\|_H^2 \right)
-\]
-
-\[
-\alpha^* = X(K + \lambda I_n)^{-1} y - \sum_{i=1}^n \alpha_i^* \phi(x_i), \quad \alpha = (K + \lambda I_n)^{-1} y
-\]
-
-\newpage
-
-\section{Gaussian Kernel}
-
-\[
-k(x, x') = \exp\left(-\frac{\|x - x'\|^2}{\sigma^2}\right)
-\]
-
-$\sigma$, $k$ less centralized, more smoother. $\|f\|_{H_k}^2 = \sum_j \frac{|\hat{f}_j|^2}{\lambda_j}$, so larger $k$ decays faster, $f$ has fat tail become less penalty $k$!
-
-\section{Representer Theorem}
-
-Let $H$ be RKHS on a set $X$ with kernel $k$. $(x_1, \ldots, x_n) \subset X$ be training points. Let $L : \mathbb{R}^n \to \mathbb{R} \cup \{\infty\}$ be any loss that depends only on the vector of point-wise values:
-
-$L \mapsto (f(x_1), \ldots, f(x_n))$
-
-$\Omega : H_k \to [0, \infty)$ be a non-decreasing function of RKHS norm, e.g., $\Omega(f) = \lambda \|f\|_{H_k}^2$.
-
-Consider the regularized empirical-risk problem:
-
-\[
-\min_{f \in H_k} F(f) := L(f(x_1), \ldots, f(x_n)) + \Omega(f)
-\]
-
-Any minimizer of $F$ lies in the finite-dimensional span of the kernel sections at the data points:
-
-\[
-f(x) = \sum_{i=1}^n \alpha_i k(x, x_i) \quad \text{for some coefficients } (\alpha_1, \ldots, \alpha_n) \in \mathbb{R}^n \text{. If } \Omega \text{ is strictly increasing, } f \text{ is unique}
-\]
-
-\section{Kernel Mean Embedding}
-
-We have RKHS $H$ built from kernel $k : X \times X \to \mathbb{R}$ and a Borel probability measure $P$ on $X$.
-
-\textbf{Kernel mean embedding of $P$:}
-
-\[
-\mu_P := \mathbb{E}_P[k(\cdot, X)] \in H, \quad \text{such that}
-\]
-
-\[
-\text{for } \forall f \in H, \quad \mathbb{E}_P[f(X)] = \langle f, \mu_P \rangle_H
-\]
-
-Define linear functional $T_P : H \to \mathbb{R}$, $T_P f = \mathbb{E}_P[f(x)]$. With $f(x) = \langle f, \phi(x) \rangle_H$, we have:
-
-\[
-|T_P f| = |\mathbb{E}_P[f(X)]| \leq \mathbb{E}_P[|f(X)|] = \mathbb{E}_P[|\langle f, k(\cdot, X) \rangle_H|] \leq \mathbb{E}_P[\|f\|_H \|k(\cdot, X)\|_H]
-\]
-
-If $\mathbb{E}_P[\|k(\cdot, X)\|_H] < \infty$, $T_P$ is bounded.
-
-\[
-\text{So } \exists! \mu_P \in H \text{ such that } T_P f = \langle f, \mu_P \rangle_H \text{ by Riesz}
-\]
-
-Let $f = \phi(x) = k(\cdot, x)$, we have:
-
-\[
-\mu_P(x) = \langle \mu_P, \phi(x) \rangle_H = T_P \phi(x) = \mathbb{E}_P[k(x, X)]
-\]
-
-$\mu_P$ is just the ordinary mean of those feature vectors. $\mu_P = \mathbb{E}_P[\phi(\theta)]$.
-
-\[
-\langle \mu_P, \mu_Q \rangle_H = \mathbb{E}_P \mathbb{E}_Q [\langle k(\cdot, X), k(\cdot, Y) \rangle_H] = \mathbb{E}_P \mathbb{E}_Q [k(X, Y)]
-\]
-
-distance between feature means.
-
-\section{Empirical Mean Embedding}
-
-\[
-\hat{\mu}_P = \frac{1}{m} \sum_{i=1}^m \phi(X_i), \quad X_i \sim P
-\]
-
-\section{Maximum Mean Discrepancy}
-
-\[
-\text{MMD}^2(P, Q) = \|\mu_P - \mu_Q\|_H^2 = \mathbb{E}_P[\langle(x, X)\rangle] + \mathbb{E}_Q[\langle(y, y)\rangle]
-\]
-
-\[
-\text{distance between feature means}
-\]
-
-\textbf{empirical MMD:} 
-
-\[
-\widehat{\text{MMD}}^2 = \frac{1}{n(n-1)} \sum_{i \neq j} k(x_i, x_j) + \frac{1}{n(n-1)} \sum_{j \neq j'} k(y_j, y_{j'}) - \frac{2}{n^2} \sum_i k(x_i, y_j)
-\]
-
-\newpage
-
-\section{MMD as an Integral Probability Metric}
-
-Find a ``well learned function'' $f(x)$ to maximize $\mathbb{E}_P[\mathbb{E}[f(X)] - \mathbb{E}_Q[f(D)]]$.
-
-\[
-\text{MMD}(P, Q; F) = \|\mu_P - \mu_Q\|_H^2 = \|T_P - T_Q\|_{F'} = \sup_{\|f\|_H \leq 1} |\langle T_P - T_Q f \rangle| = \sup_{\|f\|_H \leq 1} |\mathbb{E}_P[f(X)] - \mathbb{E}_Q[f(X)]|
-\]
-
-$F$ is unit ball in RKHS $F$.
-
-$\text{MMD}(P, Q; F) = 0 \Leftrightarrow P = Q$.
-
-\section{Witness Function}
-
-\textbf{Witness function:} $f^* \sim \mu_P - \mu_Q$.
-
-\[
-f^*(v) = \langle f^*, \phi(v) \rangle_H \propto \langle \mu_P - \mu_Q, \phi(v) \rangle_H = \frac{1}{n} \sum_{i=1}^n k(x_i, v) - \frac{1}{n} \sum_{j=1}^n k(y_j, v)
-\]
-
-\section{Hypothesis Testing on MMD}
-
-Null hypothesis $H_0$: when $P = Q$ should see $\widehat{\text{MMD}}^2$ close to 0. When $P \neq Q$, statistic is asymptotically normal:
-
-\[
-\frac{\widehat{\text{MMD}}^2 - \text{MMD}^2(P, Q)}{\sqrt{V_n(p, Q)}} \xrightarrow{D} \mathcal{N}(0, 1)
-\]
-
-when $P = Q$, statistic has asymptotic distribution $n \widehat{\text{MMD}}^2 \sim \sum_{\ell=1}^{\infty} \lambda_\ell [\mathbb{Z}_\ell^2 - 2]$
-
-$\mathbb{Z}_\ell \sim \mathcal{N}(0, 2)$ i.i.d.
-
-We can permute samples from $P$ and $Q$ to simulate $P = Q$ and get $\alpha$ (false positive rate bound).
-
-\section{Maximum Mean Embedding via Fourier Series}
-
-\[
-\mu_P(x) = \langle \mu_P, k(\cdot, x) \rangle_H = \mathbb{E}_P[\mathbb{E}[k(t - x)]] = \int_X k(t - x) d P(t)
-\]
-
-\[
-\text{MMD}(P, Q; H(\mathcal{K})) = \|\mu_P - \mu_Q\|_H^2 = \left\| \sum_{\ell=0}^{\infty} [\phi_{\rho,\ell} - \phi_{Q,\ell}] \mathcal{K}_\ell^2 \exp(i \omega_\ell x) \right\|_H,
-\]
-
-\textbf{MMD}$^{\text{c}}(P, Q; H^f) = \sum_{\ell=0}^{\infty} |\varphi_{\rho,\ell} - \varphi_{Q,\ell}|^2 \mathcal{K}_\ell^2 = \sum_{\ell=0}^{\infty} |\varphi_{\rho,\ell} - \varphi_{Q,\ell}|^2 \mathcal{K}_\ell$
-
-$\mathcal{K}(x, y) = k(x - y) = \sum_{\ell=0}^{\infty} \mathcal{K}_\ell e^{i \omega_\ell (x - y)}$, $\mathcal{K}_\ell > 0$
-
-$\psi_{\rho,\ell} := \int e^{i \ell t} d P(t)$ (characteristic function).
-
-$\mu_P(x) = \int_X k(t - x) d P(x) = \int_X \sum_{\ell} \mathcal{K}_\ell e^{i \omega_\ell(t-x)} d P(t) = \sum_\ell \mathcal{K}_\ell e^{i \omega_\ell x} \int_X e^{-i \omega_\ell t} d P(t) = \sum_\ell \mathcal{K}_\ell e^{i \omega_\ell x} \psi_{\rho,\ell}$
-
-(we can use $e^{i \omega x}$ since $\mathcal{K}_\ell = \mathcal{K}_{-\ell}$)
-
-$|\psi_{\rho,\ell} - \hat{\varphi}_\ell|^2 = |\varphi_{\rho,\ell} - \varphi_{\ell+m}|^2$ since $[\hat{\mathcal{K}}_\ell^2 = 2 \tilde{\mathcal{K}}$.
-
-\section{Kernel is Characteristic}
-
-A kernel is characteristic if the mean-embedding map $P \mapsto \mu_P := \int k(\cdot, x) d P(x) \in H_k$ is injective, i.e., $\mu_P = \mu_Q \Rightarrow P = Q$.
-
-For translation-invariant kernel $\mathcal{K}(x, y) = k(x - y)$, $\mu_P = \int k(\cdot - x) d P(x) \in H_k$.
-
-$\mu_P$ is convolution of $\mathcal{K} * P$, by convolution theorem, $\widehat{\mathcal{K} * P}(\omega) = \hat{\mathcal{K}}(\omega) \hat{P}(\omega)$, where $\mathcal{K}(t) = (\int e^{-i \omega x t} d \Lambda(\omega)$, $\hat{P}(\omega) = (\int e^{-i \omega x} d P(x)$.
-
-so $\mu_P = \mu_Q \Leftrightarrow \hat{\mathcal{K}}(\omega) [\hat{P}(\omega) - \hat{Q}(\omega)] = 0$ $\forall \omega$.
-
-So full-support spectrum $\hat{\mathcal{K}}(\omega) \neq 0$ $\forall \omega$ forces $\hat{P} = \hat{Q}$ everywhere, so $P = Q$.
-
-In continuous case, $\mathcal{K}(t) = \int e^{i \omega x t} d \Lambda(\omega)$, $\hat{P}(\omega) = \int e^{-i \omega x} d \Lambda(\omega)$, $\hat{P}(\omega) = \frac{d \Lambda(\omega)}{d \omega}$.
-
-In periodic domain case, spectrum is a sum $\{\lambda_\ell\}$ (continuous)
-
-so kernel is characteristic $\Leftrightarrow$ \{\}
-
-\newpage
-
-\section{Fourier Representation of MMD on $\mathbb{R}^d$}
-
-\[
-\text{MMD}^2(P, Q; F) = \int |\hat{P}(\omega) - \hat{Q}(\omega)|^2 d \Lambda(\omega)
-\]
-
-\section{Properties of MMD and Kernels}
-
-\begin{enumerate}
-    \item \textbf{MMD decay:} with increasing perturbation frequency as $\mathcal{K}$ decays as $\ell$ grows.
-    
-    \item \textbf{Translation invariant kernel:} $k$ is characteristic for probability measures on $\mathbb{R}^d \Leftrightarrow \text{supp}(\Lambda) = \mathbb{R}^d$ (support zero on at most a countable set).
-    
-    \item \textbf{Any continuous compactly supported kernel:} is characteristic (since Fourier spectrum $\Lambda(\omega)$ cannot be 0 on an interval).
-    
-    \item \textbf{Universal RKHS:} $k(x, x')$ continuous, $X$ compact, and $F$ dense in $C(X)$ with respect to $\|\cdot\|_\infty$.
-    
-    If $X$ is compact, continuous $k(\cdot, x)$ creates compact-image.
-    
-    If $X$ is not compact, $\|k(\cdot, x)\|_F < \infty$.
-    
-    $F$ is dense in $C(X) \Rightarrow$ under $\|\cdot\|_\infty \Leftrightarrow \forall g \in C(X)$, $\forall \varepsilon > 0$, $\exists f \in F$ such that $\|f - g\|_\infty < \varepsilon$.
-    
-    \item \textbf{Universal $F \Rightarrow$ kernel is characteristic}
-\end{enumerate}
-
-\section{Test Power and Kernel Selection}
-
-Test power depends on $k(x, x')$, $P$ and $Q$ (and $n$), with characteristic kernel, MMD has power $\to 1$ as $n \to \infty$ for any fixed problem. But could be terrible for reasonable $n$.
-
-\[
-\mathbb{P}[n \widehat{\text{MMD}}^2 \geq \xi] \Rightarrow \mathbb{E}\left( \frac{\widehat{\text{MMD}}(P, Q) - c_n}{\sqrt{V_n(p, Q)}} \right), \quad \text{second term is } O(\hat{n})
-\]
-
-to maximize test power, maximize $\frac{\widehat{\text{MMD}}(P, Q)}{\sqrt{V_n(p, Q)}}$ for fix $n$.
-
-\textbf{Split data first} to choose a kernel $k$ maximizing the term and use the $k$ to perform MMD test on rest of data.
-
-\section{Type I and Type II Errors}
-
-\begin{enumerate}
-    \item \textbf{Type I error:} false positive $\to$ reject a true $H_0$
-    \item \textbf{Type II error:} false negative $\to$ accept a false $H_0$
-\end{enumerate}
-
-\section{MMD as a Dependence Measure}
-
-\[
-\text{MMD}[\rho_{XY}, P_X P_Y, H_k] = \text{Simulate } Q \text{ with pairs } (x_i, y_j)
-\]
-
-\section{Constrained Covariance}
-
-\[
-\text{COCO}(\rho_{XY}) = \sup_{\|f\|_F=1, \|g\|_G=1} \text{cov}[f(x)g(y)], \quad f \in F, g \in G, \text{two spaces}
-\]
-
-$\text{COCO} = $ max singular value of feature covariance $C_(\rho(f,g))$.
-
-\section{Hilbert-Schmidt Operators}
-
-Let $F$ and $G$ be separable Hilbert spaces. $\{e_i\}_{i \in J}$ are orthonormal basis of $F$, $\{f_j\}_{j \in I}$ for $G$.
-
-Define two compact linear operators $L : G \to F$ and $M: G \to F$:
-
-\[
-\|L\|_{HS}^2 = \sum_{j \in J} \|L f_j\|_F^2 = \sum_{i \in J} \sum_{j \in I} |\langle L f_j, e_i \rangle_F |^2
-\]
-
-Hilbert-Schmidt operators form a Hilbert space $HS(G, F)$ with inner-product:
-
-\[
-\langle L, M \rangle_{HS} = \sum_{j \in J} \langle L f_j, M f_j \rangle_F = \sum_{i \in I} \sum_{j \in J} \langle L f_j, e_i \rangle_F \langle M f_j, e_i \rangle_F
-\]
-
-\section{Finite Dimensions and Frobenius Norm}
-
-In finite dimensions, if $L$ and $M$ are matrices, the HS inner product reduces to the Frobenius inner product:
-\[
-\langle L, M \rangle_{HS} = \text{tr}(L^T M), \quad \|L\|_{HS}^2 = \sqrt{\text{tr}(L^T L)} = \sum_{i,j} |L_{ij}|^2, \quad \hat{\mu}_i := \frac{1}{n} \sum_{i=1}^{n} \phi(x_i)
-\]
-
-Hilbert-Schmidt inner product measures similarity of $L$ and $M$ on basis functions.
-
-If $L$ and $M$ transform OMS in a similar way, their HS inner product is large.
-
-\section{Rank-One Operator}
-
-A rank-one operator $T: G \to\mathbb{R}F$ can be written as:
-\[
-T = a \otimes b, \quad a \in F, b \in G
-\]
-
-For $\psi \in G$, $(a \otimes b)\psi = \langle b, \psi \rangle_G a$.
-
-The image of $T$ is the one-dimensional subspace $\text{span}\{a\}$, hence rank-one:
-
-\[
-\|a \otimes b\|_{HS}^2 = \sum_{j \in J} \|(a \otimes b)f_j\|_F^2 = \sum_{j \in J} |\langle b, f_j \rangle_G|^2 a\|_F = \|a\|_F^2 \sum_{j \in J} \|b, f_j \rangle_G\|_F^2 = \|a\|_F^2 \|b\|_G^2 < \infty
-\]
-
-$a \otimes b$ is a Hilbert-Schmidt operator.
-
-\section{Expected Hilbert-Schmidt Inner Product Functional}
-
-Define linear functionals operator by expected Hilbert-Schmidt inner product functional:
-
-\[
-T_{xy} : HS(G, F) \to \mathbb{R}
-\]
-
-\[
-T_{xy}(A) = \mathbb{E}_{xy} \left[ \left\langle \phi(x) \otimes \psi(y), A \right\rangle_{HS} \right]
-\]
-
-It is a bounded operator if:
-\[
-\mathbb{E}_{xy} \left\| [\phi(x) \otimes \psi(y)] \|_{HS} \right] = \mathbb{E}_{xy} \left[ [\phi(x) \otimes \psi(y)]^* \right] < \infty
-\]
-
-then $T_{xy} \in HS^* $ (a continuous dual of HS)
-
-and by Riesz representation theorem: $\exists ! \hat{C}_{xy} \in HS(G,F)$ such that:
-
-\[
-T_{xy}(A) = \langle \hat{C}_{xy}, A \rangle_{HS}
-\]
-
-\section{Rank-One Covariance Operator}
-
-We choose $A = f \otimes g$. Then:
-\[
-\langle \hat{C}_{xy}, f \otimes g \rangle_{HS} = \langle f, \hat{C}_{xy} g \rangle_F
-= \mathbb{E}_{xy} [\langle \phi(x), f \rangle_F \langle \psi(y), g \rangle_F]
-\]
-
-Define by expected operator:
-\[
-T_{xy}: HS(G, F) \to \mathbb{R}, \quad T_{xy}(A) = \mathbb{E}_{xy} [\langle \phi(x) \otimes \psi(y), A \rangle_{HS}]
-\]
-
-\section{Empirical Covariance Operator}
-
-\[
-\hat{C}_{xy} = \frac{1}{n} \sum_{i=1}^{n} \phi(x_i) \otimes \psi(y_i) - \mu_x \otimes \mu_y, \quad \text{where} \quad \mu_x := \frac{1}{n} \sum_{i=1}^{n} \phi(x_i)
-\]
-
-\[
-\hat{C}_{xy} = \frac{1}{n} X^T Y, \quad X = [\phi(x_1), \ldots, \phi(x_n)]^T, \quad Y = [\psi(y_1), \ldots, \psi(y_n)]^T
-\]
-
-\[
-\tilde{C}_{xy} = HR H, \quad \tilde{C}_{xy} = HLH
-\]
-
-\[
-\text{COCO}(P_{xy}) = \sup_{\|f\|=1, \|g\|=1} \text{cov}[f(x)g(y)]
-\]
-
-We can do maximize $\langle f, \hat{C}_{xy} g \rangle_F$ subject to $\|f\|_F = 1, \|g\|_G = 1$. Witness function should be $f = \frac{1}{\sqrt{n}} \sum_i a_i [\phi(x_i) - \mu_x]$ and $g = Y H P$.
-
-$f \hat{C}_{xy} g = \frac{1}{n} \alpha^T K L \beta$, and $\|f\|_F^2 = \alpha^T K \alpha$, $\|g\|_G^2 = \beta^T L \beta$.
-
-\section{Associated Lagrangian}
-
-\[
-\text{COCO}(P_{xy}) = \sup_{\|f\|=1, \|g\|_G=1} \text{cov}[f(x)g(y)]
-\]
-
-With Lagrangian formula with multipliers $\gamma \in \mathbb{R}^m$:
-
-\[
-\mathcal{L}(P, Q; F, g) = - f^T \hat{C}_{xy} g + \frac{1}{2}[\|f\|_F^2 - 1) + \frac{1}{2}c\|g\|_G^2 - 1]
-\]
-
-where $\alpha_0 = \sup (\mathbb{E}_{xy} [\phi(x) \otimes \psi(y)] \|_{HS})$, $\alpha = r$.
+For large samples and characteristic kernels, MMD provides a consistent test for distributional differences.
+\end{proposition}
 
 \section{Hilbert-Schmidt Independence Criterion (HSIC)}
 
+\subsection{Constrained Covariance}
+
+\begin{definition}[Constrained Covariance]
+For two probability measures $P$ on spaces with kernels $k$ and $\ell$, the constrained covariance is:
 \[
-\text{HSIC}^2(\mathcal{P}_X, \mathcal{P}_Y; F, G) = \sum_{i=1}^{\infty} \delta_i^2, \quad \delta_i := \text{CoCD}(\mathcal{P}_{XY}; F, G)
+\text{COCO}(P) := \sup_{\|f\|_{H_k}=1, \|g\|_{H_\ell}=1} \text{Cov}[f(X), g(Y)]
 \]
 
-HSIC is MMD with product kernel
+where $\text{Cov}[f(X), g(Y)] = \mathbb{E}[f(X)g(Y)] - \mathbb{E}[f(X)]\mathbb{E}[g(Y)]$.
+\end{definition}
 
+\subsection{HSIC Definition}
+
+\begin{definition}[Hilbert-Schmidt Independence Criterion]
+The HSIC between random variables $X$ (with kernel $k$) and $Y$ (with kernel $\ell$) is:
 \[
-\text{HSIC}(P_{XY}; F, G) = \text{MMD}(\mathcal{P}_X, P_X P_Y; H_k) \quad \text{where } k((x,y), (x',y')) = k(x, x') l(y, y')
+\text{HSIC}(P_{XY}; H_k, H_\ell) := \|\mathcal{C}_{XY}\|_{HS}^2
 \]
 
+where $\mathcal{C}_{XY}$ is the cross-covariance operator in the tensor product Hilbert space.
+\end{definition}
+
+HSIC measures statistical dependence and is zero if and only if $X \perp Y$.
+
+\subsection{Empirical HSIC}
+
+For samples $\{(x_i, y_i)\}_{i=1}^{n}$, the empirical HSIC can be computed efficiently as:
 \[
-\text{HSC}^2(P_{XY}; F, G) := \| \hat{C}_{XY} - \mu_X \otimes \mu_Y \|_{HS}
+\widehat{\text{HSIC}} = \frac{1}{n^2} \text{tr}(KHLH)
 \]
 
+where $K$ and $\ell$ are the kernel matrices and $H = I - \frac{1}{n}\mathbf{1}\mathbf{1}^T$ is the centering matrix.
+
+\newpage
+\part{Advanced Topics}
+
+\section{Kernel Stein Discrepancy}
+
+\subsection{Stein Operators}
+
+\begin{definition}[Langevin Stein Operator]
+For a probability distribution $p$ with score function $\nabla \log p(x)$, the Langevin Stein operator is:
 \[
-= \langle \hat{C}_{XY}, \hat{C}_{XY} \rangle_{HS} + \langle \mu_X \otimes \mu_Y, \mu_X \otimes \mu_Y \rangle_{HS} - 2 \langle \hat{C}_{XY}, \mu_X \otimes \mu_Y \rangle_{HS}
+(\mathcal{A}_p f)(x) := \nabla \log p(x) \cdot f(x) + \nabla f(x)
 \]
 
+This operator has the key property that:
 \[
-\| \hat{C}_{XY} \|_{HS}^2 = \mathbb{E}_X [k(x, x')] \mathbb{E}_Y [\ell(y, y')] = D \cdot B
+\mathbb{E}_p[\mathcal{A}_p f] = 0
+\]
+for all appropriate test functions $f$.
+\end{definition}
+
+\subsection{Definition of KSD}
+
+\begin{definition}[Kernel Stein Discrepancy]
+The Kernel Stein Discrepancy (KSD) measures the maximum violation of the Stein equation:
+\[
+\text{KSD}(Q, p; H_k) := \sup_{\|f\|_{H_k} \leq 1} \left| \mathbb{E}_{X \sim Q}[(\mathcal{A}_p f)(X)] \right|
 \]
 
+KSD is zero if and only if $Q = p$, making it a proper divergence for distribution testing without density ratio estimation.
+\end{definition}
+
+KSD is particularly useful when we have an unnormalized density or samples from a distribution but cannot compute the likelihood.
+
+\section{Optimization and Convex Analysis}
+
+\subsection{Lagrangian and Duality}
+
+\begin{definition}[Lagrangian]
+For a constrained optimization problem:
 \[
-\| \mu_X \otimes \mu_Y \|_{HS}^2 = \| \mu_X \|_F^2 \| \mu_Y \|_G^2 = \mathbb{E}_{XY} [k(x,x')] \mathbb{E}_Y[[\ell(y, y')]] =: B
+\min_x f_0(x) \quad \text{subject to } f_i(x) \leq 0, \quad i=1,\ldots,m, \quad h_j(x) = 0, \quad j=1,\ldots,p
 \]
 
+the Lagrangian is:
 \[
-\langle \hat{C}_{XY}, \mu_X \otimes \mu_Y \rangle_{HS} = \mathbb{E}_{XY} [[\phi(x) \otimes \psi(y), \mu_X \otimes \mu_Y \rangle_{HS}] = B
+L(x, \lambda, \nu) := f_0(x) + \sum_{i=1}^{m} \lambda_i f_i(x) + \sum_{j=1}^{p} \nu_j h_j(x)
 \]
 
-So $\text{HSIC}^2 = A - 2B + D$
+where $\lambda_i \geq 0$ are inequality constraint multipliers and $\nu_j$ are equality constraint multipliers.
+\end{definition}
 
-\section{Unbiased and Biased HSIC Estimators}
-
-\textbf{Unbiased } $\hat{A} := \frac{1}{n(n-3)} \sum_{i=1}^{n} \sum_{j \neq i, j'} k(x_i, x_j) \ell(y_i, y_j)$.
-
-\textbf{Biased } $\hat{A}_b := \langle \frac{1}{n} \sum_{i \phi(x_i) \otimes \psi(y_i), \frac{1}{n}\sum_{i \phi(x_i) \otimes \psi(y_i)} \rangle_{HS}$
-
-$= \frac{1}{n^2} \sum_{i,j} k(x_i, x_j) \ell(y_i, y_j) = \frac{1}{n^2} \text{tr}(KL)$.
-
-Expectation of bias is of $O(\frac{1}{n})$.
-
-\section{Empirical HSIC}
-
+The dual problem maximizes:
 \[
-\text{HSIC}^2 = \frac{1}{n^2} \text{tr}(KLH), \quad \text{HSIC}^2(Q) = \sum_{i=1}^{\infty} \lambda_l z_\ell^2, \quad z_\ell \sim \mathcal{N}(0,1) \text{ i.i.d}.
+g(\lambda, \nu) := \inf_x L(x, \lambda, \nu)
 \]
+subject to $\lambda \geq 0$.
 
-\section{Asymptotics of HSIC}
+\subsection{Strong Duality and KKT Conditions}
 
-when $P_{XY} = P_X P_Y P^*$: $n \text{HSIC}^2 \Rightarrow \sum_{\ell=1}^{\infty} \lambda_\ell z_\ell^2$, $z_\ell \sim \mathcal{N}(0,1)$ i.i.d.
+\begin{theorem}[Strong Duality via Slater's Condition]
+If the primal problem is convex and Slater's condition holds (there exists a feasible point with strict inequality for inequality constraints), then strong duality holds: the optimal value of the primal equals the optimal value of the dual.
+\end{theorem}
 
-\section{Null Distribution}
-
-Given $P_{XY} = P_X P_Y$, what is threshold $C_\alpha$ such that $\mathbb{P}(\text{HSIC}^2 > C_\alpha) < \alpha$?
-
-\textbf{Under null distribution via permutation:} permute $y$ and calculate HSIC many times to get empirical CDF.
-
-\textbf{Under null distribution via moment matching:}
-
-\[
-n \text{HSIC}^2(\hat{Z}) \sim \frac{\alpha^2}{n^2} T(\alpha), \quad \alpha = \frac{\mathbb{E}(\text{HSIC}^2)^2}{\text{Var}(\text{HSIC}^2)}, \quad \beta = \frac{n\mathbb{E}(\text{HSIC}^2)}{C_\alpha}
-\]
-
-\section{V-structure Discrepancy}
-
-\textbf{CONSISTS CI test:} $H_0 : X \perp Y | Z$ \quad \textbf{Factorization test:} $H_0: (X,Y) \perp Z | T V(Y,Z) \perp X$.
-
-\section{Lancaster Interaction Measure}
-
-Lancaster interaction measure of $(X_1, \ldots, X_D) \wedge P$ is a signed measure $\Delta P$ that vanishes whenever $P$ can be factorised non-trivially.
-
-\[
-D=2: \Delta P = P_{XY} - P_X P_Y, \quad D=3: \Delta P = P_{X_1 X_2 X_3} - P_{X_1} P_{X_2 X_3} - P_{X_2} P_{X_1 X_3} - P_{X_3} P_{X_1 X_2} + 2 P_{X_1} P_{X_2} P_{X_3}
-\]
-
-\[
-(X, Y) \perp Z \Rightarrow \Delta P = 0
-\]
-
-but $\Delta_1 P = 0 \Rightarrow (X, Y) \perp Z \vee (X, Z) \perp Y \vee (Y, Z) \perp X$. It is only useful when $\Delta P \neq D$.
-
-\section{HSIC on Feature Selection}
-
-Backwards elimination of irrelevance features to maximize HSIC.
-
-\section{Kernel Stein Discrepancy (KSD)}
-
-\[
-\text{KSD}(\pi) := \sup_{\|g\|_{\ell_\infty} \leq 1} \mathbb{E}_\pi[[\nabla_x \log \pi(x^*)]
-\]
-
-\[
-= \sup_{\|g\|_{\ell_\infty} \leq 1} \mathbb{E}_\pi[\nabla_x \log p(x)]
-\]
-
-\section{Langevin Stein Operator}
-
-\[
-\mathcal{A}_p^f(x) = \frac{1}{p(x)} \frac{d}{dx} [f(x) p(x)] = \nabla_x \log p(x) \cdot f(x) + \nabla_x f(x)
-\]
-
-\[
-\mathbb{E}_p [\mathcal{A}_p^f] = 0 \quad \text{subject to} \quad [f(x) p(x)]_\infty = 0
-\]
-
-Here we do not need to normalize $p(x)$.
-
-\section{Kernel Stein Discrepancy (KSD)}
-
-\[
-\text{KSD}_p(\mathcal{Q}) = \sup_{\|g\|_F \leq 1} \mathbb{E}_Q[\mathcal{A}_p g]
-\]
-
-\[
-= \sup_{\|g\|_F \leq 1} \mathbb{E}_Q[g].
-\]
-
-\section{Reproducing Property for the Derivative}
-
-\[
-\frac{d}{dx} f(x) = \left\langle f, \frac{d}{dx} k(x, x') \right\rangle_F, \quad \left\langle \frac{d}{dx} \phi(x), \psi(x) \right\rangle_F = \frac{d}{dx} k(x, x)
-\]
-
-\section{Derivatives of Functions}
-
-\[
-[\mathcal{A}_p f](x) = \left( \frac{d}{dx} \log p(x) \right) f(x) + \frac{d}{dx} f(x) = \left\langle f, \frac{d}{dx} k(x, x') \right\rangle_F
-\]
-
-\[
-z_\pi(x) = \left( \frac{d}{dx} \log p(x) \right) (\psi(x)) + \frac{d}{dx} \psi(x)
-\]
-
-\section{Expected Stein Operator}
-
-\[
-T_{\rho, p^*} = \mathbb{E}_Q [\mathcal{A}_p f(x)] = \left\langle f, \mathbb{E}_Q \left[ \frac{d}{dx} \log p(x) \right] \psi(x) + \frac{d}{dx} \psi(x) \right\rangle_F
-\]
-
-\[
-( T_{\rho, p} : H \to \mathbb{R} )
-\]
-
-\[
-\left| \mathbb{E}_Q [\langle f, z_x \rangle_F] \right| \leq \mathbb{E}_Q [|\langle f, z_x \rangle_F|] \leq \| f \|_F \mathbb{E}_Q [|| z_x ||_F]
-\]
-
-\[
-|| z_x ||_F^2 = C + \left( \frac{d}{dx} \log p(x) \right)^2 c, \quad \text{for boundedness we need to have } \mathbb{E}_Q \left[ \left( \frac{d}{dx} \log p(x) \right)^2 \right] < \infty
-\]
-
-So that $\mathbb{E}_Q [|| z_x ||_F] = \mathbb{E}_Q \left[ C + \left( \frac{d}{dx} \log p(x) \right)^2 c \right] \leq \sqrt{\mathbb{E}_Q \left[ c + \frac{d}{dx} \log p(x) \right]^2 c} < \infty$.
-
-If data is heavy-tailed and model has right tail, KSD may not be defined.
-
-So by Riesz, $T_\rho, p^* = \mathbb{E}_Q [\mathcal{A}_p f(x)] = \langle f, z_x \rangle_F$.
-
-\section{KSD Properties}
-
-\[
-\text{KSD} = \sup_{\|g\|_F \leq 1} \mathbb{E}_Q[\mathcal{A}_p g] = \sup_{\|g\|_F \leq 1} \mathbb{E}_Q [g], \quad \mathbb{E}_Q[z_x] \sim \mathcal{F}
-\]
-
-witness function should be $g \propto \mathbb{E}_Q[z_x]$.
-
-\section{Squared KSD}
-
-KSD can be written as $\text{KSD}^2(\mathcal{Q}, P) = \mathbb{E}_{x, x' \sim Q}[k_p(x, x')]$, where $k_p(x, \ell) = \mathcal{A}_p^x \mathcal{A}_p^y k(x, x')$, and $\mathcal{A}_p^{(1)}, \mathcal{A}_p^{(2)}$ act on the first and second arguments of $k$.
-
-\[
-\mathcal{K}_p(x, y) = S_p(x)^T S_p(x) k(x, y) + S_p(x)^T k_2(x, y) + k_1(x, y) k(x, y) + \sigma[k_{\alpha_1}(x, y)]
-\]
-
-\[
-S_p(x) = \frac{\nabla p(x)}{p(x)}, \quad k_1(x, x') = \nabla_x k(x, x'), \quad k_2(x, x') = \nabla_y k(x, x'), \quad h_p(x, x') = \nabla_x \nabla_y k(x, x')
-\]
-
-\section{Estimating KSD}
-
-\[
-\text{KSD}(Q, P; F) = \frac{1}{n(n-1)} \sum_{i=1}^{n} \sum_{j \neq i} \delta_i \delta_j h_p(z_i, z_j), \quad \text{where } \{k_i\}_{i=1}^n \text{ i.i.d., } \mathbb{E}(\delta_i) = 0 \text{ and } \mathbb{E}(\delta_i^2) = 1
-\]
-
-\[
-\sqrt{n} \left( \text{KSD}_p(\hat{Q}) - \text{KSD}_p(Q) \right) \xrightarrow{d} \mathcal{N}(0, \delta_p^2) \quad \text{where } \delta_p^2 = 4\text{Var}(\mathbb{E}_x[\mathcal{A}_p \ell(y, x')])
-\]
-
-For latent variable model testing $\hat{p}(x) = \int p(x|z) p(z) dz$, $p(x)$ is usually not tractable.
-
-we use $S_p(x) = \frac{\nabla p(x)}{p(x)} = \frac{\nabla p(x|z)}{p(x)} = \int \frac{\nabla p(x|z)}{p(x|z)} p(z|x) \mathrm{d}z = \mathbb{E}_{z|x} [S_p(x|z)]$.
-
-\section{Comparing Models via Samples}
-
-\textbf{Compare sample from Q and a model P:} usually can't compute $\mathbb{E}_P$ in closed form.
-
-\textbf{Compare a sample and a model:} KSD.
-
-\section{Hyperplane in $\mathbb{R}^D$}
-
-For a hyperplane $\{x \in \mathbb{R}^D : w^T x + b = 0\}$, $w$ is perpendicular to the hyperplane.
-
-\section{Distance of Point to Hyperplane}
-
-Distance of a point $x$ to the hyperplane is $\frac{|w^T x + b|}{\|w\|}$.
-
-\section{Generic Optimization Problem}
-
-Generic optimization problem on $X \in \mathbb{R}^D$:
-
-\[
-\text{minimize} \quad f_0(x)
-\]
-
-\[
-\text{subject to} \quad f_i(x) \leq 0, \quad i = 1, \ldots, m
-\]
-
-\[
-h_i(x) = 0, \quad i = 1, \ldots, p
-\]
-
-\textbf{Lagrangian} $L$ is a lower bound on the original problem. 
-
-\[
-L(x, \lambda, \nu) := f_0(x) + \sum_{i=1}^{m} \lambda_i f_i(x) + \sum_{i=1}^{p} \nu_i h_i(x)
-\]
-
-\[
-I_-(w) = \begin{cases} 0 & w \leq 0 \\ \infty & w > 0 \end{cases}, \quad I_0(w) = \begin{cases} 0 & w = 0 \\ \infty & w \neq 0 \end{cases}
-\]
-
-To ensure a lower bound, $\lambda \geq 0$.
-
-\[
-\inf_x g(x, \lambda, \nu) = \inf_x L(x, \lambda, \nu) \leq p^*
-\]
-
-when $\lambda \geq 0$ and $f_i(x) \leq 0$, Lagrange penalizes out of bounds of $f_i$ and reward is the bound as $\lambda_i f(x) > 0$ when out of bound while $\lambda_i f(x) \leq 0$ when in the bound.
-
-\section{Lagrange Dual Problem}
-
-\textbf{Lagrange dual problem:} maximize $g(\lambda, \nu)$ subject to $\lambda \geq 0$.
-
-\textbf{Dual function is a pointwise infimum} of affine functions of $(\lambda, \nu)$ with different $x$, hence is concave in $(\lambda, \nu)$ with convex constraint set $\lambda \geq 0$.
-
-\[
-d^* = \max g(\lambda, \nu) \leq p^*
-\]
-
-Strong duality means $d^* = p^*$.
-
-\section{Strong Duality Condition}
-
-\textbf{Strong duality} holds if:
-\begin{enumerate}
-    \item the primal problem is convex, i.e., $f_0, \ldots, f_m$ are convex minimize $f_o(x)$ subject to $f_i(x) \leq 0$ $i = 1, \ldots, n$, $Ax = b$.
-    
-    \item \textbf{Slater's condition holds:} there exists some strictly feasible point $x^* \in \text{relint}(\mathcal{D})$ such that $f_i(x^*) < 0$, $i = 1, \ldots, m$, $Ax^* = b$.
-    
-    \item In affine $f_i$ case, we allow $f_i(x^*) \leq 0$. (Only need strict inequality over non-affine constraints).
-\end{enumerate}
-
-\section{KKT Conditions}
-
-Under strong duality, $x^* \in \arg\max_x \min_y L(x, y)$ and $y^*$ are primal and dual solutions if:
+\begin{theorem}[KKT Conditions]
+A point $x^*$ with multipliers $(\lambda^*, \nu^*)$ satisfies the KKT conditions if:
 
 \begin{enumerate}
-    \item \textbf{Stationarity:} $0 \in \partial f_0(x^*) + \sum_i \lambda_i^* \partial f_i(x^*) + \sum_j \nu_j^* h_j(x^*)$
+    \item \textbf{Stationarity:} $0 \in \partial f_0(x^*) + \sum_i \lambda_i^* \partial f_i(x^*) + \sum_j \nu_j^* \partial h_j(x^*)$
     
-    \item \textbf{Complementary slackness:} $\lambda_i^* f_i(x^*) = 0$, $i = 1, \ldots, m$.
+    \item \textbf{Complementary slackness:} $\lambda_i^* f_i(x^*) = 0$ for all $i$
     
-    \item \textbf{Primal feasibility:} $f_i(x^*) \leq 0$, $i = 1, \ldots, m$, $h_i(x^*) = 0$, $i = 1, \ldots, p$.
+    \item \textbf{Primal feasibility:} $f_i(x^*) \leq 0$ and $h_j(x^*) = 0$
     
-    \item \textbf{Dual feasibility:} $\lambda_i^* \geq 0$, $i = 1, \ldots, m$.
+    \item \textbf{Dual feasibility:} $\lambda_i^* \geq 0$ for all $i$
 \end{enumerate}
 
-\section{Complementary Slackness}
+For convex problems with strong duality, the KKT conditions characterize optimal solutions.
+\end{theorem}
 
-This is a necessary condition for optimality:
-
-\[
-\lambda_i^* f_i(x^*) = 0, \quad \text{which means} \quad \lambda_i^* > 0 \Rightarrow f_i(x^*) = 0
-\]
-
-\[
-f_i(x^*) < 0 \Rightarrow \lambda_i^* = 0
-\]
-
-In other $f_i$ case, we allow $f_i(x^*) \leq 0$. (Only need strict inequality over non-affine constraints).
+\textbf{Complementary slackness} is key: if $\lambda_i^* > 0$, then $f_i(x^*) = 0$ (the constraint is active).
 
 \end{document}
