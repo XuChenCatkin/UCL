@@ -1,0 +1,1806 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+% Define theorem environments
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{example}{Example}[section]
+
+\title{COMP0086: Unsupervised Learning - Lecture Notes}
+\author{Comprehensive Course Notes}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% PAGE 1 CONTENT
+
+\section{Exponential Family Distributions}
+
+\subsection{Definition and Structure}
+
+\begin{definition}[Exponential Family]
+A family of probability distributions belongs to the exponential family if it can be written in the form:
+\[
+p(x \mid \boldsymbol{\theta}) = f(x) g(\boldsymbol{\theta}) e^{\boldsymbol{\phi}(\boldsymbol{\theta})^T T(x)}
+\]
+where:
+\begin{itemize}
+    \item $T(x)$ is the \textbf{sufficient statistic} of the data $x$
+    \item $\boldsymbol{\phi}(\boldsymbol{\theta})$ is the \textbf{natural parameter vector}
+    \item $g(\boldsymbol{\theta})$ is the \textbf{normalizing constant} that ensures the distribution integrates to 1
+    \item $f(x)$ is the \textbf{base measure}, which captures any dependence on the data independent of parameters
+\end{itemize}
+\end{definition}
+
+The exponential family is a powerful framework because it generalizes many standard distributions and simplifies inference tasks.
+
+\subsection{Alternative Formulation with Log-Partition Function}
+
+The exponential family can equivalently be written as:
+\[
+p(x \mid \boldsymbol{\theta}) = f(x) e^{\boldsymbol{\phi}(\boldsymbol{\theta})^T T(x) - A(\boldsymbol{\theta})}
+\]
+
+where $A(\boldsymbol{\theta})$ is called the \textbf{log-partition function}. 
+
+The relationship between the two formulations is:
+\[
+g(\boldsymbol{\theta}) = e^{-A(\boldsymbol{\theta})}
+\]
+
+This means $A(\boldsymbol{\theta}) = -\log g(\boldsymbol{\theta})$. The log-partition function is crucial because:
+\[
+\frac{\partial}{\partial \boldsymbol{\theta}} A(\boldsymbol{\theta}) = E[T(x)]
+\]
+
+Taking the derivative of the log-normalizer gives us the expected value of the sufficient statistic.
+
+\section{Common Exponential Family Distributions}
+
+\subsection{Gaussian Distribution}
+
+\begin{example}[Univariate Gaussian]
+\[
+p(x \mid \mu, \Sigma) = \frac{1}{(2\pi)^{d/2} |\Sigma|^{1/2}} \exp\left(-\frac{1}{2}(x - \mu)^T \Sigma^{-1} (x - \mu)\right)
+\]
+
+Sufficient statistics are the first and second moments of the data, and the natural parameters relate to the mean and precision (inverse covariance).
+\end{example}
+
+\subsection{Gamma Distribution}
+
+\begin{example}[Gamma Distribution]
+The Gamma distribution can be expressed in exponential family form with sufficient statistics $(x, \log x)$.
+\end{example}
+
+\subsection{Beta Distribution}
+
+\begin{definition}[Beta Distribution]
+\[
+p(x \mid \alpha, \beta) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)\Gamma(\beta)} x^{\alpha-1}(1-x)^{\beta-1}
+\]
+for $x \in [0,1]$, where $\alpha, \beta > 0$. This can be written in exponential family form with sufficient statistics $(\log x, \log(1-x))$.
+\end{definition}
+
+\section{Sufficient Statistics and Their Significance}
+
+The key insight of the exponential family is that data $x$ only affects the likelihood through its sufficient statistics $T(x)$. This means:
+\begin{itemize}
+    \item All information about $\boldsymbol{\theta}$ is captured in $T(x)$
+    \item We can reduce high-dimensional data to low-dimensional summaries without loss of information
+    \item Two datasets with the same sufficient statistics provide identical evidence for inference about $\boldsymbol{\theta}$
+\end{itemize}
+
+\section{Bayesian Inference: MAP and Model Selection}
+
+\subsection{Maximum A Posteriori Estimation}
+
+\begin{definition}[Maximum A Posteriori (MAP)]
+The MAP estimate finds the mode of the posterior distribution:
+\[
+\boldsymbol{\theta}^{\text{MAP}} = \arg\max_{\boldsymbol{\theta}} p(\boldsymbol{\theta} \mid D) = \arg\max_{\boldsymbol{\theta}} p(D \mid \boldsymbol{\theta}) p(\boldsymbol{\theta})
+\]
+\end{definition}
+
+\subsection{Model Selection with Bayes' Rule}
+
+\begin{definition}[Model Selection]
+When comparing multiple models $\mathcal{M}_1, \ldots, \mathcal{M}_k$, we compute the posterior probability of each model given data $D$:
+\[
+P(\mathcal{M}_i \mid D, \mathcal{M}_i) = \frac{P(D \mid \mathcal{M}_i) P(\mathcal{M}_i)}{P(D)}
+\]
+
+where $P(D \mid \mathcal{M}_i)$ is the marginal likelihood under model $i$:
+\[
+P(D \mid \mathcal{M}_i) = \int P(D \mid \boldsymbol{\theta}_i, \mathcal{M}_i) P(\boldsymbol{\theta}_i \mid \mathcal{M}_i) d\boldsymbol{\theta}_i
+\]
+\end{definition}
+
+\remark{Posterior model probability}
+\[
+P(\mathcal{M}_i \mid D, \mathcal{M}_i) = \frac{P(D \mid \mathcal{M}_i) P(\mathcal{M}_i)}{\sum_j P(D \mid \mathcal{M}_j) P(\mathcal{M}_j)}
+\]
+
+\section{Conjugate Priors}
+
+\subsection{The Concept of Conjugacy}
+
+\begin{definition}[Conjugate Prior]
+A prior distribution $p(\boldsymbol{\theta})$ is \textbf{conjugate} to the likelihood $p(D \mid \boldsymbol{\theta})$ if the posterior distribution $p(\boldsymbol{\theta} \mid D)$ is in the same family as the prior. Conjugate priors are particularly useful because they lead to closed-form posterior updates.
+\end{definition}
+
+The choice of conjugate prior is natural for exponential family likelihoods. The general form of a conjugate prior for exponential family distributions is:
+\[
+p(\boldsymbol{\phi}) = F(\tau, \nu) g(\boldsymbol{\phi})^{\tau} e^{\nu \boldsymbol{\phi}^T T_0}
+\]
+
+where:
+\begin{itemize}
+    \item $F(\tau, \nu)$ is the normalizing constant
+    \item $\tau > 0$ is the concentration or scale of the prior
+    \item $\nu \in \mathbb{R}_{>0}$ concentrates the prior around a mean
+    \item $T_0$ is a pseudo-data contribution
+\end{itemize}
+
+The posterior given a conjugate prior is:
+\[
+p(\boldsymbol{\phi} \mid D, \mathcal{M}_i) = F(T + \sum_{j=1}^{n} T_j(x_i), \nu + n)
+\]
+
+where the posterior parameters are updated by adding data contributions to prior hyperparameters.
+
+\subsection{Conjugate Prior: Bernoulli-Beta Example}
+
+\begin{example}[Bernoulli Likelihood with Beta Conjugate Prior]
+Consider a Bernoulli likelihood for binary observations. The natural conjugate prior is the Beta distribution.
+
+\textbf{Prior:} $p(\theta) = \text{Beta}(\tau + 1, \nu - \tau + 1)$
+
+\textbf{Posterior:} Given data from $n$ observations with counts, the posterior is:
+\[
+p(\theta \mid D) \propto \text{Beta}\left(\tau + \sum_{i=1}^n x_i + 1, \nu - \tau + n - \sum_{i=1}^n x_i + 1\right)
+\]
+\end{example}
+
+\subsection{Posterior Given Conjugate Prior}
+
+When using a conjugate prior with exponential family likelihood, the posterior remains in the same family. For example:
+
+\begin{example}[Bernoulli-Beta Conjugacy]
+\textbf{Model:} Bernoulli observations with Beta conjugate prior
+
+\textbf{Prior:} $\text{Beta}(\tau + 1, \nu - \tau + 1)$
+
+\textbf{Posterior:} 
+\[
+p(\theta \mid D) = \text{Beta}\left(\tau + \sum_{i=1}^n x_i + 1, \nu - \tau + n - \sum_{i=1}^n x_i + 1\right)
+\]
+
+The posterior is also Beta distributed, with hyperparameters updated based on the observed data.
+\end{example}
+
+\section{Information-Theoretic Quantities}
+
+\subsection{Fisher Information Matrix}
+
+The \textbf{Fisher Score} (or Fisher Information Matrix) quantifies the curvature of the log-likelihood and measures the amount of information the data carries about the parameters:
+
+\[
+\nabla_{\boldsymbol{\theta}} \log p(x \mid \boldsymbol{\theta})
+\]
+
+The Fisher Information Matrix is defined as:
+\[
+\mathcal{I}(\boldsymbol{\theta}) = E\left[\left(\nabla_{\boldsymbol{\theta}} \log p(x \mid \boldsymbol{\theta})\right) \left(\nabla_{\boldsymbol{\theta}} \log p(x \mid \boldsymbol{\theta})\right)^T\right]
+\]
+
+An important property: $\mathbb{E}[\nabla_{\boldsymbol{\theta}} \log p(x \mid \boldsymbol{\theta})] = 0$ (the score has zero mean).
+
+The Fisher Information is crucial for:
+\begin{itemize}
+    \item Determining the asymptotic variance of the MLE: $\text{Var}(\hat{\boldsymbol{\theta}}_{\text{MLE}}) \approx \mathcal{I}(\boldsymbol{\theta})^{-1} / n$
+    \item Computing the Cramér--Rao lower bound on estimator variance
+\end{itemize}
+
+\section{Linear Algebra: Matrix Properties and Orthonormal Bases}
+
+\subsection{Eigenvalues of Symmetric Matrices}
+
+\begin{theorem}[Spectral Properties of Symmetric Matrices]
+Symmetric real matrices have particularly nice properties:
+\begin{enumerate}
+    \item All eigenvalues are real
+    \item Eigenvectors corresponding to distinct eigenvalues are orthogonal
+    \item A symmetric matrix of dimension $d \times d$ has exactly $d$ eigenvalues (counting multiplicities)
+\end{enumerate}
+\end{theorem}
+
+These properties are fundamental for many algorithms in unsupervised learning, particularly in principal component analysis (PCA) and spectral clustering.
+
+\subsection{Transforming Between Orthonormal Bases}
+
+\begin{definition}[Orthonormal Basis Transformation]
+Let $\mathcal{U} = \{u_1, \ldots, u_d\}$ and $\mathcal{V} = \{v_1, \ldots, v_d\}$ be two orthonormal bases (ONBs) in $\mathbb{R}^d$. 
+
+We can express the change of basis using an orthogonal transformation matrix:
+\[
+O = \begin{bmatrix} \langle u_1, v_1 \rangle & \langle u_1, v_2 \rangle & \cdots \\ \langle u_2, v_1 \rangle & \langle u_2, v_2 \rangle & \cdots \\ \vdots & \vdots & \ddots \end{bmatrix}
+\]
+
+with the property that $O^T O = I$ (orthogonal matrix). For coordinates, if $y$ are coordinates in the $\mathcal{V}$ basis and $x$ are coordinates in the $\mathcal{U}$ basis, then:
+\[
+x = O y
+\]
+
+The transformation has the form:
+\[
+w_j = \frac{1}{\sqrt{n}} \sum_{i=1}^{|V|} O_{ji} v_i
+\]
+\end{definition}
+
+This linear transformation preserves distances and angles, making it fundamental for algorithms like PCA where we want to find new coordinate systems that capture data variance.
+
+\newpage
+
+% PAGE 2 CONTENT
+
+\section{Quadratic Forms and Matrix Properties}
+
+\subsection{Quadratic Forms}
+
+\begin{definition}[Quadratic Form]
+For a symmetric matrix $\mathbf{A} \in \mathbb{R}^{n \times n}$ and vector $\mathbf{x} \in \mathbb{R}^n$, the quadratic form is:
+\[
+\mathbf{x}^T \mathbf{A} \mathbf{x}
+\]
+\end{definition}
+
+The quadratic form tells us about the curvature properties of the matrix:
+
+\begin{definition}[Positive/Negative Definite Matrices]
+A symmetric matrix $\mathbf{A}$ is:
+\begin{itemize}
+    \item \textbf{Positive definite:} $\mathbf{x}^T \mathbf{A} \mathbf{x} > 0$ for all $\mathbf{x} \neq 0$
+    \item \textbf{Positive semi-definite:} $\mathbf{x}^T \mathbf{A} \mathbf{x} \geq 0$ for all $\mathbf{x}$
+    \item \textbf{Negative definite:} $\mathbf{x}^T \mathbf{A} \mathbf{x} < 0$ for all $\mathbf{x} \neq 0$
+\end{itemize}
+\end{definition}
+
+Quadratic forms with positive/negative definite matrices define \textbf{elliptic quadratic forms}.
+
+\subsection{Eigenvalue Decomposition of the Covariance Matrix}
+
+\begin{theorem}[Eigenvalue Decomposition]
+For a symmetric matrix $\mathbf{A}$, the eigenvalue decomposition is:
+\[
+\mathbf{A} = \mathbf{P} \mathbf{D} \mathbf{P}^T
+\]
+where:
+\begin{itemize}
+    \item $\mathbf{P}$ is the \textbf{eigenvector matrix} (columns are eigenvectors)
+    \item $\mathbf{D}$ is the \textbf{diagonal matrix of eigenvalues}
+    \item $\mathbf{P}$ is orthogonal: $\mathbf{P}^T \mathbf{P} = \mathbf{I}$
+\end{itemize}
+
+This transformation expresses the matrix in terms of its eigenvector basis. The eigenvectors form a new basis, and the eigenvalues tell us the scaling factor along each basis direction.
+\end{theorem}
+
+\remark{Geometric Interpretation}
+The eigenvector matrix $\mathbf{P}$ serves as a transformation from the original basis to a new eigenbasis. In this new coordinate system, the matrix $\mathbf{A}$ becomes diagonal, with the eigenvalues on the diagonal. This is the key insight behind Principal Component Analysis (PCA).
+
+\subsection{Multivariate Gaussians in Coordinate Systems}
+
+\begin{theorem}[Multivariate Gaussian Representation]
+A multivariate Gaussian with arbitrary covariance matrix can be represented as independent (uncorrelated) Gaussians in an appropriate coordinate system. Specifically, if $\mathbf{x} \sim \mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, then in the eigenvector basis of $\boldsymbol{\Sigma}$, the components are independent Gaussians.
+
+Mathematically:
+\[
+\mathbf{z} = \mathbf{P}^T (\mathbf{x} - \boldsymbol{\mu})
+\]
+where $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{D})$ and $\mathbf{D}$ is diagonal.
+
+This property is fundamental for understanding covariance structure and for algorithms like PCA.
+\end{theorem}
+
+\section{Matrix Calculus}
+
+\subsection{Basic Matrix Derivatives}
+
+Computing derivatives with respect to matrices is essential for optimization in machine learning. Some key results:
+
+\begin{proposition}[Matrix Derivatives]
+\begin{align}
+\frac{\partial}{\partial \mathbf{A}} \text{Tr}(\mathbf{G} \mathbf{A}^T \mathbf{B}) &= \mathbf{B} \mathbf{G}^T \\
+\frac{\partial}{\partial \mathbf{A}} \text{Tr}(\mathbf{G} \mathbf{A}^T \mathbf{B} \mathbf{A} \mathbf{C}^T) &= \mathbf{B} \mathbf{A} \mathbf{C} + \mathbf{B}^T \mathbf{A} \mathbf{C}^T \\
+\frac{\partial}{\partial \mathbf{A}} \log |\mathbf{A}| &= (\mathbf{A}^{-1})^T = \mathbf{A}^{-T}
+\end{align}
+\end{proposition}
+
+The last result is particularly important for probabilistic models where the likelihood involves the determinant of the covariance matrix.
+
+\section{Linear Gaussian Models}
+
+\subsection{Linear Regression with Gaussian Noise}
+
+\begin{definition}[Linear Gaussian Model]
+Consider a linear model with Gaussian noise:
+\[
+\mathbf{y} = \mathbf{W} \mathbf{x} + \boldsymbol{\epsilon}, \quad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \nu I)
+\]
+where:
+\begin{itemize}
+    \item $\mathbf{W}$ is the weight matrix to be learned
+    \item $\nu$ is the noise variance
+    \item Observations are $\{(\mathbf{x}_i, \mathbf{y}_i)\}_{i=1}^n$
+\end{itemize}
+
+The optimal weights (maximum likelihood estimate) are:
+\[
+\hat{\mathbf{W}}_{ML} = \sum_{i=1}^n \mathbf{y}_i \mathbf{x}_i^T \left(\sum_{i=1}^n \mathbf{x}_i \mathbf{x}_i^T\right)^{-1}
+\]
+\end{definition}
+
+\subsection{MAP Estimation with Gaussian Prior}
+
+When we place a Gaussian prior on the weights:
+\[
+p(\mathbf{W} \mid \mathbf{A}) = \mathcal{N}(\mathbf{0}, \mathbf{A}^{-1})
+\]
+
+The MAP estimate becomes:
+\[
+\mathbf{W}^{\text{MAP}} = \left(\mathbf{A} + \sum_{i=1}^n \mathbf{x}_i \mathbf{x}_i^T\right)^{-1} \sum_{i=1}^n \mathbf{y}_i \mathbf{x}_i^T
+\]
+
+The prior precision matrix $\mathbf{A}$ acts as a regularizer, shrinking the weights toward zero.
+
+\section{Dimensionality Reduction}
+
+\subsection{Probabilistic Principal Component Analysis (PPCA)}
+
+\begin{definition}[Probabilistic PCA Model]
+Probabilistic PCA extends standard PCA with a probabilistic framework:
+\[
+z \sim \mathcal{N}(\mathbf{0}, \mathbf{I}) \quad \text{(latent variables)}
+\]
+\[
+p(\mathbf{x} \mid \mathbf{z}) = \mathcal{N}(\mathbf{\Lambda} \mathbf{z}, \nu \mathbf{I})
+\]
+\[
+p(\mathbf{x}) = \int p(\mathbf{z}) p(\mathbf{x} \mid \mathbf{z}) d\mathbf{z} = \mathcal{N}(\mathbf{0}, \mathbf{\Lambda} \mathbf{\Lambda}^T + \nu \mathbf{I})
+\]
+
+where:
+\begin{itemize}
+    \item $\mathbf{z} \in \mathbb{R}^K$ is a latent variable with $K < D$ (dimensionality reduction)
+    \item $\mathbf{\Lambda} \in \mathbb{R}^{D \times K}$ is the loading matrix
+    \item $\nu$ is the noise variance in the observation space
+\end{itemize}
+\end{definition}
+
+\begin{remark}[Variance Decomposition]
+The variance of the data can be decomposed as:
+\[
+\text{Var}(\mathbf{X}) = \mathbb{E}[\text{Var}(\mathbf{X} \mid \mathbf{Z})] + \text{Var}(\mathbb{E}[\mathbf{X} \mid \mathbf{Z}])
+\]
+
+This shows that PPCA captures variance in two parts: the variance explained by the latent factors and the residual noise variance.
+\end{remark}
+
+\begin{remark}[Dimensionality Limitation]
+If $\nu \to 0$, the PPCA model can only capture $K$ dimensions of variance. The latent dimension $K$ determines the maximum rank of variance that can be represented.
+\end{remark}
+
+\subsection{Principal Component Analysis (PCA) Algorithm}
+
+\begin{definition}[PCA Objective]
+PCA seeks to find $K$ orthonormal directions that maximize the variance in the data:
+\[
+\mathbf{\lambda}_K = \arg\max_{\mathbf{v}} \sum_{i=1}^n \|\mathbf{X}_i \cdot \mathbf{v}\|^2 \quad \text{subject to} \quad \|\mathbf{v}\|^2 = 1
+\]
+\end{definition}
+
+\begin{proposition}[PCA Algorithm]
+To find the top $K$ principal components:
+
+\begin{enumerate}
+    \item Compute the sample covariance matrix:
+    \[
+    \hat{\boldsymbol{\Sigma}} = \frac{1}{n} \sum_{i=1}^n \mathbf{X}_i \mathbf{X}_i^T
+    \]
+    
+    \item Perform eigenvalue decomposition: $\hat{\boldsymbol{\Sigma}} = \mathbf{U} \mathbf{\Lambda}^2 \mathbf{U}^T$
+    
+    \item Select the top $K$ eigenvectors with largest eigenvalues to form:
+    \[
+    \mathbf{U}_K = [\mathbf{u}_1, \ldots, \mathbf{u}_K]
+    \]
+    
+    \item Project the data to the lower-dimensional space:
+    \[
+    \mathbf{Z}_i = \mathbf{U}_K^T \mathbf{X}_i
+    \]
+    
+    \item The reconstruction is:
+    \[
+    \hat{\mathbf{X}}_i = \mathbf{U}_K \mathbf{U}_K^T \mathbf{X}_i
+    \]
+    which is an orthogonal projection onto the $K$-dimensional subspace.
+\end{enumerate}
+\end{proposition}
+
+\begin{remark}[Key Differences: PCA vs PPCA]
+\begin{itemize}
+    \item In \textbf{PCA}, the noise is assumed to be isotropic and orthogonal to all principal components.
+    \item In \textbf{PPCA}, the noise is explicitly modeled in the observation space and is taken into account when determining the principal subspace.
+    \item When $\nu \to 0$, PPCA reduces to standard PCA.
+\end{itemize}
+\end{remark}
+
+\subsection{Posterior Inference in PPCA}
+
+Given an observation $\mathbf{x}_i$, we can infer the latent variables using:
+\[
+\mathbb{E}[Z \mid \mathbf{x}_i] = \mathbf{M}^{-1} \mathbf{\Lambda}^T \nu^{-1} \mathbf{x}_i
+\]
+
+where $\mathbf{M} = \mathbf{\Lambda}^T \nu^{-1} \mathbf{\Lambda} + \mathbf{I}$ is the posterior precision.
+
+The posterior variance is:
+\[
+\text{Cov}(Z \mid \mathbf{x}_i) = \mathbf{M}^{-1}
+\]
+
+As the noise variance $\nu \to 0$, the PPCA framework transitions toward standard PCA.
+
+\section{Mixture Models}
+
+\subsection{Mixture Model Likelihood}
+
+\begin{definition}[Mixture Model]
+A mixture model models the data as coming from one of $M$ components:
+\[
+p(\mathbf{x}_i) = \sum_{m=1}^M P(c_i = m) p(\mathbf{x}_i \mid c_i = m) = \sum_{m=1}^M \pi_m p(\mathbf{x}_i \mid \boldsymbol{\theta}_m)
+\]
+
+where:
+\begin{itemize}
+    \item $\pi_m = P(c_i = m)$ are the mixture weights (proportions)
+    \item $\boldsymbol{\theta}_m$ are the parameters of component $m$
+    \item $c_i$ is the component indicator for data point $i$
+\end{itemize}
+\end{definition}
+
+\subsection{Posterior Responsibility}
+
+Given a data point $\mathbf{x}_i$, we can compute the probability that it belongs to component $m$ using Bayes' rule:
+
+\begin{definition}[Responsibility]
+\[
+P(c_i = m \mid \mathbf{x}_i) = \frac{\pi_m p(\mathbf{x}_i \mid \boldsymbol{\theta}_m)}{\sum_{m'=1}^M \pi_{m'} p(\mathbf{x}_i \mid \boldsymbol{\theta}_{m'})}
+\]
+
+This quantity is called the \textbf{responsibility} of component $m$ for data point $i$, often denoted $\rho_{im}$.
+\end{definition}
+
+\subsection{Maximum Likelihood Estimation in Mixture Models}
+
+\begin{definition}[Log-Likelihood for Mixture Models]
+The log-likelihood of the data is:
+\[
+\mathcal{L} = \sum_{i=1}^n \log \sum_{m=1}^M \pi_m p(\mathbf{x}_i \mid \boldsymbol{\theta}_m)
+\]
+
+Taking derivatives and setting them to zero gives the MLE updates:
+
+\begin{align}
+\pi_m &\propto \sum_{i=1}^n P(c_i = m \mid \mathbf{x}_i) \\
+\frac{\partial \mathcal{L}}{\partial \boldsymbol{\theta}_m} &= \sum_{i=1}^n P(c_i = m \mid \mathbf{x}_i) \frac{\partial \log p(\mathbf{x}_i \mid \boldsymbol{\theta}_m)}{\partial \boldsymbol{\theta}_m}
+\end{align}
+
+These updates are the basis for the Expectation-Maximization (EM) algorithm, which alternates between computing responsibilities (E-step) and updating parameters (M-step).
+\end{definition}
+
+\newpage
+
+% PAGE 3 CONTENT
+
+\subsection{K-Means Clustering Algorithm}
+
+\begin{definition}[K-Means Algorithm]
+K-Means is a special case of the mixture model where we assume the responsibility is deterministic (hard assignment) and the noise variance goes to zero ($\sigma \to 0$). In this limit:
+\[
+\rho_{im} \to \delta(m, \arg\min_m \|\mathbf{x}_i - \boldsymbol{\mu}_m\|^2)
+\]
+
+The K-Means algorithm alternates between two steps:
+
+\begin{enumerate}
+    \item \textbf{Assignment Step:} Assign each point to its closest cluster mean:
+    \[
+    c_i = \arg\min_m \|\mathbf{x}_i - \boldsymbol{\mu}_m\|^2
+    \]
+    
+    \item \textbf{Update Step:} Recalculate the cluster means as the centroid of assigned points:
+    \[
+    \boldsymbol{\mu}_m = \frac{\sum_{i: c_i = m} \mathbf{x}_i}{\sum_{i: c_i = m} 1}
+    \]
+\end{enumerate}
+
+Note: K-Means has no learning rate. At each iteration, the parameter update is the exact optimal solution for the current assignment. The algorithm is guaranteed to converge (though possibly to a local optimum).
+\end{definition}
+
+\section{Information Theory}
+
+\subsection{Information and Entropy}
+
+\begin{definition}[Information Content]
+When we observe a data point $x$ sampled from a distribution $P$, the information (or surprise) is:
+\[
+I(x) := \log \frac{1}{p(x)} = -\log P(x)
+\]
+
+This quantity is \textbf{additive} in the sense that observing independent events yields additive information. Data with low probability provides more information (high surprise), while high-probability data provides less information.
+\end{definition}
+
+\begin{definition}[Shannon Entropy]
+The Shannon entropy of a random variable $X$ is the expected value of the information:
+\[
+H[X] := \mathbb{E}_P[-\log p(x)] = -\sum_{x} p(x) \log p(x)
+\]
+
+Entropy measures the average surprise or uncertainty in the distribution.
+\end{definition}
+
+\begin{theorem}[Properties of Shannon Entropy]
+\begin{enumerate}
+    \item \textbf{Non-negativity:} $H[X] \geq 0$, with equality if and only if the distribution is deterministic ($p(x_i) = 1$ for some $x_i$).
+    
+    \item \textbf{Maximum entropy:} For a finite distribution with $d$ elements, the maximum entropy is achieved by the uniform distribution:
+    \[
+    \max_P H[X] = \log d \quad \text{(achieved by uniform distribution)}
+    \]
+    
+    \item \textbf{Concavity:} Entropy is a concave function of the distribution $p$.
+\end{enumerate}
+\end{theorem}
+
+\subsection{Axioms for Information Measures}
+
+Any reasonable measure of information should satisfy certain fundamental axioms. Shannon showed that these axioms uniquely characterize the entropy function.
+
+\begin{theorem}[Shannon's Axioms]
+A function $H$ on distributions $P$ over space $X$ is a valid measure of information if and only if it satisfies:
+
+\begin{enumerate}
+    \item \textbf{Additivity for independent variables:} For independent $X$ and $Y$:
+    \[
+    H(X, Y) = H(X) + H(Y \mid X)
+    \]
+    
+    \item \textbf{Continuity:} $H(P)$ is a continuous function of the probability distribution.
+    
+    \item \textbf{Monotonicity in dimension:} As the number of equally likely outcomes increases, the uncertainty increases:
+    \[
+    H(U(d)) < H(U(d+1))
+    \]
+    where $U(d)$ is the uniform distribution over $d$ elements.
+\end{enumerate}
+
+Any function satisfying these three axioms has the form:
+\[
+H(P) = c \cdot H_{\text{Shannon}}(P)
+\]
+for some positive constant $c$ (typically $c=1$ with logarithm base 2 for bits).
+\end{theorem}
+
+\subsection{Huffman Coding}
+
+\begin{definition}[Huffman Coding]
+Huffman coding is a lossless compression algorithm that assigns shorter binary codes to more frequent symbols and longer codes to less frequent symbols. This minimizes the expected code length.
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Count the frequency of each symbol
+    \item Build a binary tree by repeatedly merging the two symbols with lowest frequency
+    \item Assign codes: left branch = 0, right branch = 1
+    \item Read from root to leaf to get each symbol's code
+\end{enumerate}
+
+\textbf{Example:} For the string "ABRACADABRA":
+\begin{itemize}
+    \item Frequencies: A=5, B=2, R=2, C=1, D=1
+    \item Huffman codes: A=0, B=10, R=110, C=1110, D=1111
+    \item This achieves compression close to the Shannon entropy bound
+\end{itemize}
+\end{definition}
+
+\subsection{Source Coding Theorem}
+
+\begin{theorem}[Shannon's Source Coding Theorem]
+For i.i.d. samples $X_1, X_2, \ldots, X_n$ from distribution $P$, and an encoder $\mathcal{C}$ that maps sequences to binary strings:
+
+\[
+H(P) \leq \mathbb{E}[\text{length}(\mathcal{C}(X_1, \ldots, X_n))] / n \leq H(P) + \varepsilon
+\]
+for sufficiently large $n$.
+
+This means:
+\begin{itemize}
+    \item \textbf{Lower bound:} The entropy $H(P)$ is the fundamental limit on lossless compression. No lossless code can achieve an average code length less than $H(P)$ bits per symbol.
+    
+    \item \textbf{Achievability:} For large enough $n$, there exists a code (like Huffman coding) that gets arbitrarily close to the entropy limit.
+    
+    \item \textbf{Key insight:} The minimum average code length depends on the distribution $P$ only.
+\end{itemize}
+\end{theorem}
+
+\section{Divergence Measures and Model Comparison}
+
+\subsection{Kullback-Leibler Divergence}
+
+\begin{definition}[Kullback-Leibler (KL) Divergence]
+The KL divergence measures the difference between two probability distributions $P$ and $Q$ over the same space:
+\[
+\text{KL}(P \| Q) := \mathbb{E}_P\left[\log \frac{p(x)}{q(x)}\right] = -\sum_x p(x) \log q(x) + \sum_x p(x) \log p(x)
+\]
+\[
+= \sum_x p(x) \log \frac{p(x)}{q(x)}
+\]
+
+The KL divergence can be interpreted as:
+\begin{itemize}
+    \item The expected information gained by switching from $Q$ to $P$
+    \item The cross-entropy minus the entropy: $\text{KL}(P \| Q) = H(P, Q) - H(P)$
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[Properties of KL Divergence]
+\begin{enumerate}
+    \item \textbf{Non-negativity:} $\text{KL}(P \| Q) \geq 0$, with equality if and only if $P = Q$.
+    
+    \item \textbf{Asymmetry:} In general, $\text{KL}(P \| Q) \neq \text{KL}(Q \| P)$.
+    
+    \item \textbf{Convexity:} KL divergence is convex in both its arguments.
+\end{enumerate}
+\end{theorem}
+
+\begin{remark}[Interpretation of Asymmetry]
+The asymmetry of KL divergence is important:
+\begin{itemize}
+    \item $\text{KL}(P \| Q)$ is small when $Q$ is concentrated where $P$ is concentrated (mode-seeking behavior)
+    \item $\text{KL}(Q \| P)$ is small when $Q$ has support where $P$ has support (mass-covering behavior)
+\end{itemize}
+
+This difference is important in variational inference, where we often minimize $\text{KL}(Q \| P)$ to find a simpler distribution $Q$ that approximates the true posterior $P$.
+\end{remark}
+
+\newpage
+
+% PAGE 4 CONTENT
+
+\subsection{Cross-Entropy}
+
+\begin{definition}[Cross-Entropy]
+The cross-entropy between distributions $P$ and $Q$ is:
+\[
+H(P, Q) := -\sum_x p(x) \log q(x)
+\]
+
+This measures the expected code length if we use codes designed for distribution $Q$ when the true distribution is $P$. Alternatively, it measures the average surprisal under the wrong distribution.
+
+The cross-entropy can be decomposed as:
+\[
+H(P, Q) = H(P) + \text{KL}(P \| Q)
+\]
+
+where $H(P)$ is the entropy of $P$ (the minimum possible code length). Thus, KL divergence measures the additional cost of using the wrong distribution.
+\end{definition}
+
+\subsection{Mutual Information}
+
+\begin{definition}[Mutual Information]
+The mutual information between random variables $X$ and $Y$ measures their statistical dependence:
+\[
+I[X, Y] := \text{KL}(P(X,Y) \| P(X) P(Y)) = \sum_{x,y} p(x,y) \log \frac{p(x,y)}{p(x)p(y)}
+\]
+
+\textbf{Properties:}
+\begin{itemize}
+    \item $I[X, Y] \geq 0$, with equality if and only if $X \perp Y$ (independence)
+    \item $I[X, Y] = I[Y, X]$ (symmetry)
+    \item Mutual information measures how much knowing $Y$ reduces uncertainty about $X$
+\end{itemize}
+\end{definition}
+
+\subsection{Differential Entropy and Continuous Case}
+
+\begin{definition}[Differential Entropy]
+For continuous random variables, entropy is defined as:
+\[
+H[X] := \int_X p(x) \log p(x) \, dx
+\]
+
+\textbf{Important distinction:} Unlike discrete entropy, differential entropy can be negative. This reflects the fact that continuous distributions can have arbitrarily high precision, reducing uncertainty below one bit.
+\end{definition}
+
+The properties of KL divergence and mutual information extend to the continuous case in a straightforward manner.
+
+\section{Maximum Entropy and Maximum Likelihood}
+
+\subsection{Exponential Family as Maximum Entropy Model}
+
+\begin{theorem}[Maximum Entropy for Exponential Families]
+Among all distributions satisfying the constraint $\mathbb{E}[T(X)] = t$, the exponential family distribution with natural parameters $\boldsymbol{\phi}$ chosen such that the constraint is satisfied has maximum entropy.
+
+Conversely, if we want to model a distribution with maximum entropy subject to constraints on expected values of certain features, the exponential family is the natural choice.
+\end{theorem}
+
+\remark{Practical Implication}
+When building probabilistic models (especially in Bayesian settings), if we know only the expected value of some sufficient statistics but want to avoid over-committing to a specific distribution, using the exponential family is a principled choice that makes minimal assumptions.
+
+\subsection{Maximum Likelihood as KL Minimization}
+
+\begin{theorem}[ML Minimizes KL Divergence]
+Maximum likelihood estimation can be interpreted as minimizing the KL divergence between the empirical distribution and the model:
+\[
+\boldsymbol{\theta}^{\text{ML}} = \arg\min_{\boldsymbol{\theta}} \text{KL}(\hat{P}_{\text{emp}} \| p(\cdot \mid \boldsymbol{\theta}))
+\]
+where $\hat{P}_{\text{emp}}$ is the empirical distribution on the data.
+\end{theorem}
+
+\section{Variational Inference and the EM Algorithm}
+
+\subsection{Free Energy and Variational Lower Bound}
+
+\begin{definition}[Free Energy]
+For a model with hidden variables $Z$ and observations $X$, the free energy is:
+\[
+\mathcal{F}(q, \boldsymbol{\theta}) = \mathbb{E}_q[\log p(X, Z \mid \boldsymbol{\theta})] - H[q(Z)]
+\]
+
+where $q(Z)$ is a distribution over the latent variables.
+
+This can be rewritten as:
+\[
+\mathcal{F}(q, \boldsymbol{\theta}) = \log p(X \mid \boldsymbol{\theta}) - \text{KL}(q(Z) \| p(Z \mid X, \boldsymbol{\theta}))
+\]
+\end{definition}
+
+\begin{theorem}[Variational Lower Bound]
+The free energy forms a lower bound on the log-likelihood:
+\[
+\mathcal{F}(q, \boldsymbol{\theta}) \leq \log p(X \mid \boldsymbol{\theta})
+\]
+
+with equality when $q(Z) = p(Z \mid X, \boldsymbol{\theta})$ (the true posterior).
+\end{theorem}
+
+This bound is fundamental to variational inference: we optimize the free energy as a proxy for the intractable likelihood.
+
+\subsection{Expectation-Maximization Algorithm}
+
+\begin{definition}[EM Algorithm]
+The Expectation-Maximization algorithm maximizes the free energy by alternating between:
+
+\begin{enumerate}
+    \item \textbf{E-step (Expectation):} Optimize the free energy with respect to the posterior distribution $q(Z)$, holding $\boldsymbol{\theta}$ fixed:
+    \[
+    q^{(k)}(Z) = \arg\max_q \mathcal{F}(q, \boldsymbol{\theta}^{(k-1)})
+    \]
+    This gives $q^{(k)}(Z) = p(Z \mid X, \boldsymbol{\theta}^{(k-1)})$, the true posterior under current parameters.
+    
+    \item \textbf{M-step (Maximization):} Optimize the free energy with respect to the parameters $\boldsymbol{\theta}$, holding $q$ fixed:
+    \[
+    \boldsymbol{\theta}^{(k)} = \arg\max_{\boldsymbol{\theta}} \mathcal{F}(q^{(k)}(Z), \boldsymbol{\theta}) = \arg\max_{\boldsymbol{\theta}} \sum_{i=1}^n \sum_z q^{(k)}(z_i) \log p(x_i, z_i \mid \boldsymbol{\theta})
+    \]
+\end{enumerate}
+
+After convergence, the free energy equals the likelihood.
+\end{definition}
+
+\subsection{EM for K-Means}
+
+For K-Means, the EM algorithm simplifies to:
+\begin{itemize}
+    \item \textbf{E-step:} Assign each point to its nearest cluster center: $c_i = \arg\min_m \|\mathbf{x}_i - \boldsymbol{\mu}_m\|^2$
+    \item \textbf{M-step:} Update cluster centers: $\boldsymbol{\mu}_m = \frac{1}{|C_m|} \sum_{i \in C_m} \mathbf{x}_i$
+\end{itemize}
+
+\subsection{EM for Exponential Family Models}
+
+When the joint distribution $p(Z, X \mid \boldsymbol{\theta})$ belongs to the exponential family:
+\[
+p(Z, X \mid \boldsymbol{\theta}) = f(Z, X) \exp(\boldsymbol{\phi}(\boldsymbol{\theta})^T T(Z, X) - A(\boldsymbol{\theta}))
+\]
+
+The free energy becomes:
+\[
+\mathcal{F}(q, \boldsymbol{\theta}) = \boldsymbol{\phi}(\boldsymbol{\theta})^T \mathbb{E}_q[T(Z, X)] - A(\boldsymbol{\theta}) + H[q] + \text{const}
+\]
+
+\textbf{E-step:} Compute the expected sufficient statistics under the posterior:
+\[
+\mathbb{E}_q[T(Z, X)] = \int q(z) f(z) \exp(\boldsymbol{\phi}(\boldsymbol{\theta})^T T(z, x)) T(z, x) dz
+\]
+
+\textbf{M-step:} Moment matching - set the expected sufficient statistics under the posterior equal to those under the current model. This is accomplished by solving:
+\[
+\frac{\partial \mathcal{F}}{\partial \boldsymbol{\phi}} = \mathbb{E}_q[T(Z, X)] - \mathbb{E}_p[T(Z, X) \mid \boldsymbol{\theta}] = 0
+\]
+
+Thus, the EM algorithm reduces to computing expected sufficient statistics in both steps, with parameter updates determined by moment matching.
+
+\newpage
+
+% PAGE 5 CONTENT
+
+\subsection{EM for MAP Estimation with Conjugate Priors}
+
+When we have a conjugate prior on the parameters, the EM algorithm can be modified to maximize the posterior instead of the likelihood. If the prior is:
+\[
+p(\boldsymbol{\theta}) = F(\tau, \nu) \frac{\exp(\boldsymbol{\theta}^T \tau \boldsymbol{\zeta})}{Z(\boldsymbol{\theta})^{\nu}}
+\]
+
+The MAP-EM algorithm modifies the free energy to include the log prior:
+\[
+\mathcal{F}_{\text{MAP}}(q, \boldsymbol{\theta}) = \mathbb{E}_q[\log p(Z, X \mid \boldsymbol{\theta})] + \log p(\boldsymbol{\theta}) + H[q]
+\]
+
+The resulting updates incorporate data as if there were $(N + \nu)$ pseudo-observations with expected sufficient statistics adjusted by the prior.
+
+\subsection{Gaussian Mixture Model}
+
+\begin{definition}[GMM with EM Updates]
+For a Gaussian mixture model with $M$ components:
+
+\textbf{E-step:} Compute responsibilities (soft assignments):
+\[
+\rho_{im} = P(c_i = m \mid \mathbf{x}_i) \propto \pi_m \mathcal{N}(\mathbf{x}_i \mid \boldsymbol{\mu}_m, \sigma_m^2 I)
+\]
+
+\textbf{M-step:} Update parameters:
+\[
+\boldsymbol{\mu}_m = \frac{\sum_{i=1}^n \rho_{im} \mathbf{x}_i}{\sum_{i=1}^n \rho_{im}}, \quad \sigma_m^2 = \frac{\sum_{i=1}^n \rho_{im} \|\mathbf{x}_i - \boldsymbol{\mu}_m\|^2}{\sum_{i=1}^n \rho_{im}}, \quad \pi_m = \frac{1}{n} \sum_{i=1}^n \rho_{im}
+\]
+\end{definition}
+
+\subsection{Discrete Latent Variables in Vector Form}
+
+\begin{definition}[One-Hot Encoding for Discrete Latents]
+For discrete latent variables taking values in $\{1, \ldots, M\}$, we can encode them in one-hot vector form:
+\[
+\mathbf{s}_i = \mathbf{e}_m \quad \Rightarrow \quad S_i = [0, 0, \ldots, 1, \ldots, 0]^T
+\]
+where the 1 is in position $m$.
+
+For exponential family models with discrete latents, the sufficient statistics and the log-partition function can be organized:
+\[
+\boldsymbol{\Theta} = [\boldsymbol{\theta}_1^T; \ldots; \boldsymbol{\theta}_M^T] \quad \text{(} M \times d \text{ matrix)}
+\]
+\[
+\log p(\mathbf{x}, \mathbf{s}) = \sum_i [(\log \boldsymbol{\pi})^T \mathbf{s}_i + \mathbf{s}_i^T \boldsymbol{\Theta} T(\mathbf{x}_i) - \mathbf{s}_i^T \log Z(\boldsymbol{\theta})] + \text{const}
+\]
+
+This is linear in the discrete latent variables, making the E-step tractable.
+\end{definition}
+
+\section{Temporal Models: State Space and Hidden Markov Models}
+
+\subsection{General Latent Variable Models}
+
+\begin{definition}[Joint Probability for Latent Variable Models]
+For a sequence model with latent variables $Z_{1:T}$ and observations $X_{1:T}$:
+\[
+P(Z_{1:T}, X_{1:T}) = P(Z_1) P(X_1 \mid Z_1) \prod_{t=2}^T P(Z_t \mid Z_{t-1}) P(X_t \mid Z_t)
+\]
+
+This factorization captures:
+\begin{itemize}
+    \item A Markov transition model on latent states
+    \item Observation models that depend only on the current latent state
+    \item Conditional independence structure that makes inference tractable
+\end{itemize}
+\end{definition}
+
+\subsection{Linear Gaussian State Space Models}
+
+\begin{definition}[Linear Gaussian SSM]
+A linear Gaussian state space model (SSM) consists of:
+
+\textbf{Initial state:} $\mathbf{z}_1 \sim \mathcal{N}(\boldsymbol{\mu}_0, \Sigma_0)$
+
+\textbf{State dynamics (transition):} $\mathbf{z}_{t+1} = \mathbf{A} \mathbf{z}_t + \mathbf{v}_t, \quad \mathbf{v}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{R})$
+
+\textbf{Observation model:} $\mathbf{x}_t = \mathbf{C} \mathbf{z}_t + \mathbf{w}_t, \quad \mathbf{w}_t \sim \mathcal{N}(\mathbf{0}, \mathbf{Q})$
+
+where:
+\begin{itemize}
+    \item $\mathbf{A}$ is the state transition matrix
+    \item $\mathbf{C}$ is the observation matrix
+    \item $\mathbf{R}$ and $\mathbf{Q}$ are the process and measurement noise covariances
+    \item $\mathbf{v}_t, \mathbf{w}_t$ are zero-mean, uncorrelated noise vectors
+\end{itemize}
+
+Linear Gaussian SSMs are particularly useful because inference (Kalman filtering) has closed-form solutions.
+\end{definition}
+
+\subsection{Hidden Markov Models}
+
+\begin{definition}[Hidden Markov Model (HMM)]
+An HMM models sequential data with discrete hidden states $S_{1:T}$ and observations $X_{1:T}$:
+\[
+P(S_{1:T}, X_{1:T}) = P(S_1) P(X_1 \mid S_1) \prod_{t=2}^T P(S_{t+1} \mid S_t) P(X_t \mid S_t)
+\]
+
+The model is parameterized by:
+\begin{itemize}
+    \item \textbf{Initial state distribution:} $\boldsymbol{\pi}_i = P(S_1 = i)$
+    
+    \item \textbf{Transition matrix:} $A_{ij} = P(S_{t+1} = j \mid S_t = i)$
+    
+    \item \textbf{Observation model:}
+    \begin{itemize}
+        \item For continuous observations: $A_j(\mathbf{x}) = p(\mathbf{x}_t \mid S_t = j)$
+        \item For discrete observations: $A_{jk} = P(X_t = k \mid S_t = j)$
+    \end{itemize}
+\end{itemize}
+
+\textbf{Important note:} Although the hidden state sequence is first-order Markov, the marginal distribution of observations $X_{1:T}$ may not be Markov of any order, since states are hidden.
+\end{definition}
+
+\subsection{Three Fundamental HMM Inference Problems}
+
+\begin{definition}[HMM Inference Problems]
+Three key inference tasks in HMMs:
+
+\begin{enumerate}
+    \item \textbf{Filtering:} Estimate the current state given all observations up to the present:
+    \[
+    P(Z_t \mid X_{1:t})
+    \]
+    Used for online prediction and state tracking.
+    
+    \item \textbf{Smoothing:} Estimate past states given all observations:
+    \[
+    P(Z_t \mid X_{1:T}) \quad \text{where } t < T
+    \]
+    Provides better estimates than filtering since it uses future information.
+    
+    \item \textbf{Prediction:} Estimate future states:
+    \[
+    P(Z_{t+k} \mid X_{1:t}) \quad \text{for } k > 0
+    \]
+    Predicts the system's future behavior.
+\end{enumerate}
+\end{definition}
+
+\subsection{Forward Recursion and Recursive Inference}
+
+\begin{theorem}[Forward Recursion for HMMs]
+Filtering in HMMs can be computed recursively using the forward algorithm:
+
+\[
+P(Z_t \mid X_{1:t}) \propto p(X_t \mid Z_t) \int P(Z_t \mid Z_{t-1}) P(Z_{t-1} \mid X_{1:t-1}) dZ_{t-1}
+\]
+
+This recursion alternates between:
+\begin{enumerate}
+    \item \textbf{Prediction:} Propagate beliefs forward using the transition model
+    \item \textbf{Update/Measurement:} Correct beliefs using the new observation
+\end{enumerate}
+
+For discrete HMMs with finite state spaces, this can be written using joint distributions:
+\[
+P(Z_t, X_{1:t}) = p(X_t \mid Z_t) \int P(Z_t \mid Z_{t-1}) P(Z_{t-1}, X_{1:t-1}) dZ_{t-1}
+\]
+
+The normalization is then performed to get the conditional distribution.
+\end{theorem}
+
+\begin{remark}[Computational Efficiency]
+For discrete HMMs with $M$ states and $T$ observations:
+\begin{itemize}
+    \item Naive inference: $\mathcal{O}(M^T)$ (exponential in sequence length)
+    \item Forward/backward algorithms: $\mathcal{O}(M^2 T)$ (linear in sequence length with quadratic dependence on state dimension)
+    \item The recursive structure enables efficient dynamic programming
+\end{itemize}
+\end{remark}
+
+\newpage
+
+% PAGE 6 CONTENT
+
+\subsection{Inference in Linear Gaussian State Space Models}
+
+\subsubsection{Conditional Gaussian Properties}
+
+\begin{theorem}[Conditional Distribution of Joint Gaussians]
+If two random variables are jointly Gaussian:
+\[
+\begin{bmatrix} \mathbf{X}_A \\ \mathbf{X}_B \end{bmatrix} \sim \mathcal{N}\left(\begin{bmatrix} \boldsymbol{\mu}_A \\ \boldsymbol{\mu}_B \end{bmatrix}, \begin{bmatrix} \Sigma_A & \Sigma_{AB} \\ \Sigma_{BA} & \Sigma_B \end{bmatrix}\right)
+\]
+
+Then the conditional distribution of $\mathbf{X}_A$ given $\mathbf{X}_B$ is also Gaussian:
+\[
+\mathbb{E}[\mathbf{X}_A \mid \mathbf{X}_B = \mathbf{x}_B] = \boldsymbol{\mu}_A + \Sigma_{AB} \Sigma_B^{-1} (\mathbf{x}_B - \boldsymbol{\mu}_B)
+\]
+\[
+\text{Cov}(\mathbf{X}_A \mid \mathbf{X}_B = \mathbf{x}_B) = \Sigma_A - \Sigma_{AB} \Sigma_B^{-1} \Sigma_{BA}
+\]
+
+This property is fundamental for Kalman filtering and other inference in Gaussian state space models.
+\end{theorem}
+
+\subsubsection{Kalman Filter Algorithm}
+
+\begin{definition}[Kalman Filter]
+The Kalman Filter solves the filtering problem (computing $p(Z_t \mid X_{1:t})$) for linear Gaussian SSMs in closed form.
+
+For the model:
+\begin{align}
+\mathbf{z}_1 &\sim \mathcal{N}(\boldsymbol{\mu}_0, \Omega_0)\\
+\mathbf{z}_{t+1} &\sim \mathcal{N}(\mathbf{A} \mathbf{z}_t, \Omega)\\
+\mathbf{x}_t &\mid \mathbf{z}_t \sim \mathcal{N}(\mathbf{C} \mathbf{z}_t, \mathbf{R})
+\end{align}
+
+The algorithm maintains and updates:
+\begin{itemize}
+    \item Filtered mean: $\hat{\mathbf{z}}_t = \mathbb{E}[\mathbf{z}_t \mid X_{1:t}]$
+    \item Filtered covariance: $\hat{V}_t = \text{Cov}(\mathbf{z}_t \mid X_{1:t})$
+\end{itemize}
+
+\textbf{Prediction step:} 
+\begin{align}
+\hat{\mathbf{z}}_t^{\text{pred}} &= \mathbb{E}[\mathbf{z}_t \mid X_{1:t-1}] = \mathbf{A} \hat{\mathbf{z}}_{t-1}\\
+\hat{V}_t^{\text{pred}} &= \mathbb{V}[\mathbf{z}_t \mid X_{1:t-1}] = \mathbf{A} \hat{V}_{t-1} \mathbf{A}^T + \Omega
+\end{align}
+
+\textbf{Kalman Gain:}
+\[
+\mathbf{K}_t = \text{Cov}(\mathbf{z}_t, \mathbf{x}_t) \text{Var}(\mathbf{x}_t)^{-1} = \hat{V}_t^{\text{pred}} \mathbf{C}^T (\mathbf{C} \hat{V}_t^{\text{pred}} \mathbf{C}^T + \mathbf{R})^{-1}
+\]
+
+\textbf{Update step:}
+\[
+\hat{\mathbf{z}}_t = \hat{\mathbf{z}}_t^{\text{pred}} + \mathbf{K}_t (\mathbf{x}_t - \mathbf{C} \hat{\mathbf{z}}_t^{\text{pred}})
+\]
+\[
+\hat{V}_t = \hat{V}_t^{\text{pred}} - \mathbf{K}_t \mathbf{C} \hat{V}_t^{\text{pred}}
+\]
+
+The Kalman Filter provides optimal (minimum variance) estimates when the model is Gaussian and linear.
+\end{definition}
+
+\subsubsection{Bayesian Smoothing: Forward-Backward Algorithm}
+
+\begin{definition}[Forward-Backward Algorithm]
+Smoothing computes $P(Z_t \mid X_{1:T})$ by combining information from past and future observations.
+
+Define:
+\begin{itemize}
+    \item \textbf{Forward message:} $\alpha_t(z_t) = P(X_{1:t}, Z_t \mid \theta)$ — evidence from past
+    \item \textbf{Backward message:} $\beta_t(z_t) = P(X_{t+1:T} \mid Z_t, \theta)$ — evidence from future
+\end{itemize}
+
+Then the posterior can be written as:
+\[
+P(Z_t \mid X_{1:T}) \propto \alpha_t(Z_t) \beta_t(Z_t)
+\]
+
+\textbf{Forward recursion:}
+\[
+\alpha_{t+1}(z_{t+1}) = P(X_{t+1} \mid z_{t+1}) \sum_{z_t} P(z_{t+1} \mid z_t) \alpha_t(z_t)
+\]
+
+\textbf{Backward recursion:}
+\[
+\beta_t(z_t) = \sum_{z_{t+1}} P(X_{t+1} \mid z_{t+1}) P(z_{t+1} \mid z_t) \beta_{t+1}(z_{t+1})
+\]
+
+This algorithm is also known as the \textbf{Baum-Welch algorithm} in the HMM literature.
+\end{definition}
+
+\subsubsection{Viterbi Algorithm: Maximum Most Likely Path}
+
+\begin{definition}[Viterbi Algorithm]
+The Viterbi algorithm finds the most likely sequence of hidden states:
+\[
+S^* = \arg\max_{S_{1:T}} P(S_{1:T} \mid X_{1:T}, \theta)
+\]
+
+Instead of summing over paths (as in forward-backward), it tracks the maximum:
+\[
+\alpha^{\max}_t(j) = \max_i \alpha^{\max}_{t-1}(i) A_{ij} p(X_t \mid j)
+\]
+
+The algorithm replaces the sum-product computations with max-sum, reducing complexity while finding the Viterbi path (most likely hidden state sequence).
+
+This is useful for applications like speech recognition where we need the single most likely sequence rather than marginal posteriors.
+\end{definition}
+
+\subsubsection{Kalman Smoothing}
+
+\begin{definition}[Kalman Smoothing]
+Kalman smoothing extends the Kalman filter to the smoothing problem: computing $p(Z_t \mid X_{1:T})$ for $t \leq T$ in linear Gaussian models.
+
+Starting with forward-filtered estimates $\hat{\mathbf{z}}_t, \hat{V}_t$, we can compute smoothed posteriors by a backward pass.
+
+\textbf{Smoothing gain:}
+\[
+\mathbf{J}_t = \text{Cov}(\mathbf{z}_t, \mathbf{z}_{t+1} \mid X_{1:t}) \text{Var}(\mathbf{z}_{t+1} \mid X_{1:t})^{-1} = \hat{V}_t \mathbf{A}^T (\hat{V}_{t+1}^{\text{pred}})^{-1}
+\]
+
+\textbf{Smoothed mean:}
+\[
+\bar{\mathbf{z}}_t = \hat{\mathbf{z}}_t + \mathbf{J}_t (\bar{\mathbf{z}}_{t+1} - \mathbf{A} \hat{\mathbf{z}}_t)
+\]
+
+\textbf{Smoothed covariance:}
+\[
+\bar{V}_t = \hat{V}_t + \mathbf{J}_t (\bar{V}_{t+1} - \hat{V}_{t+1}^{\text{pred}}) \mathbf{J}_t^T
+\]
+
+Starting from the final filtered estimate at $t=T$, we recursively compute smoothed estimates backward in time.
+
+\textbf{Key advantage:} Smoothing provides better state estimates than filtering because it uses all observations, not just those up to the current time.
+\end{definition}
+
+\newpage
+
+% PAGE 7 CONTENT
+
+\section{Parameter Learning in State Space Models}
+
+\subsection{ML Learning for Linear Gaussian State Space Models}
+
+\begin{definition}[SSM Parameter Learning]
+For the linear Gaussian SSM with parameters $\boldsymbol{\theta} = \{\boldsymbol{\mu}_0, \Omega_0, \mathbf{A}, \Omega, \mathbf{C}, \mathbf{R}\}$, we can use EM to learn these parameters.
+
+The key observation is that the measurement model depends only on the observation $\mathbf{x}_t$ and latent state $\mathbf{z}_t$. In the M-step, the derivatives of the free energy with respect to parameters can be expressed in terms of expected sufficient statistics.
+
+For the observation matrix $\mathbf{C}$:
+\[
+\mathbf{C}_{\text{new}} = \left(\sum_{i,t} \mathbf{x}_t \langle \mathbf{z}_t \rangle^T\right) \left(\sum_{i,t} \langle \mathbf{z}_t \mathbf{z}_t^T \rangle\right)^{-1}
+\]
+
+For the observation noise covariance:
+\[
+\mathbf{R}_{\text{new}} = \frac{1}{n T} \left(\sum_{i,t} \mathbf{x}_t \mathbf{x}_t^T - \mathbf{C} \sum_{i,t} \langle \mathbf{z}_t \rangle \mathbf{x}_t^T\right)
+\]
+
+For the transition matrix $\mathbf{A}$:
+\[
+\mathbf{A}_{\text{new}} = \left(\sum_{i,t} \langle \mathbf{z}_{t+1} \mathbf{z}_t^T \rangle\right) \left(\sum_{i,t} \langle \mathbf{z}_t \mathbf{z}_t^T \rangle\right)^{-1}
+\]
+
+For the process noise covariance:
+\[
+\Omega_{\text{new}} = \frac{1}{n T} \left(\sum_{i,t} \langle \mathbf{z}_{t+1} \mathbf{z}_{t+1}^T \rangle - \mathbf{A} \sum_{i,t} \langle \mathbf{z}_{t+1} \mathbf{z}_t^T \rangle\right)
+\]
+
+The E-step must compute the expected sufficient statistics: $\sum_t \langle \mathbf{z}_t \rangle$, $\sum_t \langle \mathbf{z}_t \mathbf{z}_t^T \rangle$, and $\sum_t \langle \mathbf{z}_{t+1} \mathbf{z}_t \rangle$ using the Kalman smoother.
+\end{definition}
+
+\subsection{Online Gradient-Based Learning}
+
+\begin{definition}[Online Learning for SSMs]
+For streaming applications, we can use online gradient descent on the log-likelihood:
+\[
+\ell(\boldsymbol{\theta}) = \sum_t \log p(\mathbf{x}_t \mid \mathbf{x}_{1:t-1}) = \sum_t \ell_t
+\]
+
+For each observation, the single-step likelihood is:
+\[
+\ell_t = -\frac{1}{2} \log |\Sigma_t| - \frac{1}{2} (\mathbf{x}_t - \mathbf{C} \hat{\mathbf{z}}_t^{\text{pred}})^T \Sigma_t^{-1} (\mathbf{x}_t - \mathbf{C} \hat{\mathbf{z}}_t^{\text{pred}})
+\]
+
+where:
+\begin{itemize}
+    \item $\hat{\mathbf{z}}_t^{\text{pred}}$ is the predicted state from the Kalman filter
+    \item $\Sigma_t = \mathbf{C} V_t^{\text{pred}} \mathbf{C}^T + \mathbf{R}$ is the predicted observation variance
+\end{itemize}
+
+We compute the gradient $\nabla_{\boldsymbol{\theta}} \ell_t$ and perform stochastic gradient updates:
+\[
+\boldsymbol{\theta} \leftarrow \boldsymbol{\theta} + \eta \nabla_{\boldsymbol{\theta}} \ell_t
+\]
+
+This approach is useful for online adaptation and for very long sequences where batch EM is intractable.
+\end{definition}
+
+\subsection{EM Learning for Hidden Markov Models}
+
+\begin{definition}[HMM Parameter Learning with EM (Baum-Welch)]
+For HMMs with discrete observations, the EM algorithm is known as the Baum-Welch algorithm. The M-step updates are:
+
+\textbf{Initial state distribution:}
+\[
+\pi_i^{\text{new}} = \frac{1}{n} \sum_i \gamma_1(i)
+\]
+
+\textbf{Transition probabilities:}
+\[
+A_{ij}^{\text{new}} = \frac{\sum_t \xi_t(i \to j)}{\sum_j \sum_t \xi_t(i \to j)} = \frac{\text{expected transitions } i \to j}{\text{expected times in state } i}
+\]
+
+where $\xi_t(i \to j) = P(S_t = i, S_{t+1} = j \mid X_{1:T})$ are the expected bigram counts.
+
+\textbf{Observation distribution:}
+For discrete observations:
+\[
+P(X_t = k \mid S_t = j)^{\text{new}} = \frac{\sum_t \mathbb{1}[X_t = k] \gamma_t(j)}{\sum_t \gamma_t(j)}
+\]
+
+For Gaussian emissions:
+\[
+\boldsymbol{\mu}_j^{\text{new}} = \frac{\sum_t \gamma_t(j) \mathbf{x}_t}{\sum_t \gamma_t(j)}
+\]
+\[
+\Sigma_j^{\text{new}} = \frac{\sum_t \gamma_t(j) (\mathbf{x}_t - \boldsymbol{\mu}_j^{\text{new}}) (\mathbf{x}_t - \boldsymbol{\mu}_j^{\text{new}})^T}{\sum_t \gamma_t(j)}
+\]
+
+These updates use the posterior marginals $\gamma_t(j) = P(S_t = j \mid X_{1:T})$ computed in the E-step using the forward-backward algorithm.
+\end{definition}
+
+\remark{Baum-Welch as EM}
+The Baum-Welch algorithm is exactly the EM algorithm applied to HMMs:
+\begin{itemize}
+    \item \textbf{E-step:} Use the forward-backward algorithm to compute $\gamma_t(j)$ and $\xi_t(i \to j)$
+    \item \textbf{M-step:} Update parameters using the expected counts derived from these posterior marginals
+    \item The algorithm is guaranteed to increase (or maintain) the likelihood at each iteration
+\end{itemize}
+
+\newpage
+
+% PAGE 8 CONTENT
+
+\section{Markov Chain Theory and Sampling Methods}
+
+\subsection{Markov Chain Basics and Classification}
+
+\begin{definition}[Markov Chain Properties]
+A finite-state Markov chain is characterized by its transition matrix $\mathbf{P}$ where $P_{ij}$ is the probability of transitioning from state $i$ to state $j$.
+
+Key properties:
+\begin{enumerate}
+    \item \textbf{Accessibility:} State $j$ is accessible from state $i$ (denoted $i \to j$) if $P_{ij}^{(n)} > 0$ for some $n \geq 0$
+    
+    \item \textbf{Communication:} States $i$ and $j$ communicate ($i \leftrightarrow j$) if they are mutually accessible
+    
+    \item \textbf{Irreducibility:} A Markov chain is irreducible if all states communicate (there is only one communicating class)
+    
+    \item \textbf{Recurrence:} A state is recurrent if, starting from it, the chain will eventually return to it with probability 1. Otherwise, it is transient
+\end{enumerate}
+\end{definition}
+
+\subsection{Periodicity and Ergodicity}
+
+\begin{definition}[Periodicity]
+The period of state $i$ is:
+\[
+d(i) = \gcd\{n \geq 1 : P_{ii}^{(n)} > 0\}
+\]
+
+A Markov chain is \textbf{aperiodic} if $d(i) = 1$ for all states $i$.
+\end{definition}
+
+\begin{definition}[Ergodic States]
+A state that is positive recurrent and aperiodic is called \textbf{ergodic}.
+
+Key properties:
+\begin{itemize}
+    \item \textbf{Mean recurrence time:} $M_i = \mathbb{E}[R_i \mid X_0 = i] = \sum_{k=1}^{\infty} k f_{ii}^{(k)}$, where $f_{ii}^{(k)}$ is the probability of first return to $i$ at time $k$
+    
+    \item \textbf{Positive recurrence:} $M_i < \infty$
+    
+    \item \textbf{Null recurrence:} $M_i = \infty$
+\end{itemize}
+\end{definition}
+
+\subsection{Stationary Distribution and Convergence}
+
+\begin{theorem}[Basic Limit Theorem for Markov Chains]
+For an irreducible, aperiodic, and positive recurrent Markov chain:
+
+\[
+\lim_{n \to \infty} P_{ij}^{(n)} = \pi_j = \frac{1}{M_j}
+\]
+
+exists and is independent of the initial state $i$.
+
+The stationary distribution $\boldsymbol{\pi}$ satisfies:
+\begin{itemize}
+    \item $\mathbf{P}^T \boldsymbol{\pi} = \boldsymbol{\pi}$ (it is an eigenvector of $\mathbf{P}^T$ with eigenvalue 1)
+    \item $\pi_j$ is the long-run fraction of time the chain spends in state $j$
+\end{itemize}
+\end{theorem}
+
+\begin{remark}[Convergence Rate]
+The rate of convergence to the stationary distribution depends on the spectral gap—the ratio between the largest and second-largest eigenvalues of $\mathbf{P}$. Chains with larger spectral gaps mix faster.
+\end{remark}
+
+\section{Sampling Methods}
+
+\subsection{Direct Sampling from Mixture Distributions}
+
+\begin{definition}[Marginalized Posterior Predictive]
+When performing Bayesian inference with latent variables, we can integrate out the uncertainty in parameters:
+\[
+p(X_{n+1} \mid X_{1:n}) = \int p(X_{n+1} \mid \theta) p(\theta \mid X_{1:n}) d\theta = \mathbb{E}_{p(\theta \mid X_{1:n})}[p(X_{n+1} \mid \theta)]
+\]
+
+This mixture distribution can be approximated by:
+\[
+p(X_{n+1} \mid X_{1:n}) \approx \frac{1}{m} \sum_{i=1}^m p(X_{n+1} \mid \theta_i)
+\]
+
+where $\theta_i$ are samples from the posterior.
+\end{definition}
+
+\subsection{Rejection Sampling}
+
+\begin{definition}[Rejection Sampling]
+To sample from a target distribution $p(x)$, we use a proposal distribution $r(x)$ (called an envelope) such that $p(x) \leq M \cdot r(x)$ for some $M > 0$.
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Sample $X_i \sim r(x)$
+    \item Sample $Y_i \sim \text{Uniform}(0, r(X_i))$
+    \item If $Y_i < p(X_i)$, keep $X_i$; otherwise discard it
+\end{enumerate}
+
+\textbf{Advantage:} We don't need to know the normalizing constant of $p$.
+
+\textbf{Disadvantage:} The acceptance rate is $\frac{1}{M}$, which is low if $M$ is large.
+\end{definition}
+
+\subsection{Importance Sampling}
+
+\begin{definition}[Importance Sampling]
+Importance sampling computes expectations under a target distribution $p$ using samples from a proposal distribution $q$:
+\[
+\mathbb{E}_p[f(x)] = \int f(x) p(x) dx = \int f(x) \frac{p(x)}{q(x)} q(x) dx = \mathbb{E}_q\left[f(x) \frac{p(x)}{q(x)}\right]
+\]
+
+If we have i.i.d. samples $X_1, \ldots, X_n \sim q$, we can approximate:
+\[
+\mathbb{E}_p[f(x)] \approx \frac{1}{n} \sum_{i=1}^n f(x_i) \frac{p(x_i)}{q(x_i)} = \frac{1}{n} \sum_{i=1}^n f(x_i) w_i
+\]
+
+where $w_i = \frac{p(x_i)}{q(x_i)}$ are the importance weights.
+\end{definition}
+
+\newpage
+
+% PAGE 8 CONTENT
+
+\section{Markov Chain Properties and Limit Theorems}
+
+\subsection{Accessibility and Communication}
+
+\begin{definition}[Markov Chain Transitions]
+A Markov chain is characterized by transition probabilities $P_i$, where each element $P_{ij}$ represents the probability of transitioning from state $i$ to state $j$.
+\end{definition}
+
+\begin{definition}[Accessibility and Communication]
+State $j$ is said to be \textbf{accessible} from state $i$ (denoted $i \to j$) if $P_{ij}^n > 0$ for some $n \geq 0$. 
+
+States $i$ and $j$ are said to \textbf{communicate} (denoted $i \leftrightarrow j$) if both $i \to j$ and $j \to i$ hold.
+
+A Markov chain is said to be \textbf{irreducible} if all states communicate with each other (there is only one communicating class).
+\end{definition}
+
+\subsection{Recurrence and Transience}
+
+\begin{definition}[Recurrence]
+Let $f_i$ denote the probability that starting in state $i$, the process will ever return to state $i$. Then:
+\[
+f_i^{(n)} = P(\text{return to } i \text{ in exactly } n \text{ steps}), \quad f_i = \sum_{n=1}^{\infty} f_i^{(n)}
+\]
+
+State $i$ is said to be \textbf{recurrent} if $f_i = 1$ (the process will definitely return). Otherwise it is \textbf{transient} ($f_i < 1$).
+
+If states $i$ and $j$ communicate ($i \leftrightarrow j$), then $i$ is recurrent if and only if $j$ is recurrent.
+\end{definition}
+
+\subsection{Periodicity}
+
+\begin{definition}[Periodicity of a Markov Chain]
+The \textbf{period} of state $i$ is:
+\[
+d(i) = \text{g.c.d}\{n \geq 1 : P_{ii}^n > 0\}
+\]
+where g.c.d stands for greatest common divisor.
+
+A Markov chain is \textbf{aperiodic} if $d(i) = 1$ for all states $i$.
+\end{definition}
+
+\begin{remark}[Periodicity is a Class Property]
+If states $i$ and $j$ communicate ($i \leftrightarrow j$), then $d(i) = d(j)$.
+\end{remark}
+
+\subsection{Ergodicity and Stationary Distribution}
+
+\begin{definition}[Ergodicity]
+A Markov chain is \textbf{ergodic} if it is irreducible and aperiodic. For a finite-state Markov chain, being irreducible and aperiodic guarantees ergodicity.
+\end{definition}
+
+\begin{theorem}[Convergence to Stationary Distribution]
+For an ergodic, irreducible Markov chain, there exists a unique stationary distribution $\boldsymbol{\pi}$ such that:
+\[
+\lim_{n \to \infty} P^n = \mathbf{1} \boldsymbol{\pi}^T
+\]
+
+The stationary distribution satisfies:
+\[
+\boldsymbol{\pi}^T = \boldsymbol{\pi}^T P, \quad \sum_i \pi_i = 1
+\]
+
+Convergence is exponentially fast, with rate determined by the spectral gap (difference between the largest and second-largest eigenvalues).
+\end{theorem}
+
+\begin{remark}[Mean Recurrence Time and Ergodic Theorem]
+The mean recurrence time of state $i$ is:
+\[
+M_i = \mathbb{E}[R_i \mid S_0 = i] = \sum_{k=1}^{\infty} k P_i^{(k)} = \frac{1}{\pi_i}
+\]
+
+For an ergodic chain, $M_i < \infty$. The ergodic theorem states that the time-average converges to the ensemble average (the stationary distribution):
+\[
+\lim_{N \to \infty} \frac{1}{N} \sum_{t=1}^N f(S_t) = \mathbb{E}_{\pi}[f(S)] \text{ almost surely}
+\]
+\end{remark}
+
+\subsection{Importance Sampling with Unknown Normalizers}
+
+\begin{theorem}[Self-Normalized Importance Sampling]
+When we have unnormalized densities $\tilde{p}(x) = Z_p p(x)$ and $\tilde{q}(x) = Z_q q(x)$, we can compute the ratio of normalizers:
+\[
+\frac{Z_p}{Z_q} = \mathbb{E}_q\left[\frac{\tilde{p}(x)}{\tilde{q}(x)}\right]
+\]
+
+Thus, for expectations under $p$:
+\[
+\mathbb{E}_p[f(x)] \approx \frac{\sum_{i=1}^n f(x_i) \tilde{p}(x_i) / \tilde{q}(x_i)}{\sum_{i=1}^n \tilde{p}(x_i) / \tilde{q}(x_i)}
+\]
+
+The weights are normalized to sum to 1, making the method practical when normalizing constants are unknown.
+\end{theorem}
+
+\remark{Trade-off}
+Importance sampling is flexible but can be inefficient when the proposal distribution is far from the target, particularly in high dimensions. When weights are very imbalanced (some samples have very high weight while others have negligible weight), many samples are effectively wasted.
+
+% PAGE 9 CONTENT
+
+\section{Markov Random Fields and Graphical Models}
+
+\subsection{Neighbourhood Graphs and Random Fields}
+
+\begin{definition}[Neighbourhood Graph]
+A neighbourhood graph $\mathcal{N}(\mathcal{V}_r, \mathcal{W}_r)$ consists of:
+\begin{itemize}
+    \item $\mathcal{V}_r$: the vertex set
+    \item $\mathcal{W}_r$: the set of edge weights
+\end{itemize}
+This defines a \textbf{random field}, a collection of random variables indexed by vertices.
+\end{definition}
+
+\begin{definition}[Neighbourhood of a Vertex]
+The neighbourhood of vertex $i$ is the set:
+\[
+\partial(i) = \{j \mid W_{ij} \neq 0\}
+\]
+The \textbf{Markov blanket} of vertex $\theta_i$ is:
+\[
+\text{MB}(\theta_i) = \{\partial_j : j \in \partial(i)\}
+\]
+\end{definition}
+
+\begin{definition}[Markov Property]
+A random field has the \textbf{Markov property} if:
+\[
+p(c_i|s_{\backslash i}, j \in \partial(i)) = p(c_i|s_{\partial i}, j \in \partial(i))
+\]
+Each variable $\theta_i$ is conditionally independent of the remaining field given its Markov blanket.
+\end{definition}
+
+\begin{definition}[Markov Random Field]
+A random field with the Markov property is called a \textbf{Markov Random Field (MRF)}.
+\end{definition}
+
+\subsection{Energy Functions and Exponential Family Connection}
+
+\begin{definition}[Energy Functions]
+Any strictly positive probability or density $p$ can be written in the form:
+\[
+p(x) = \frac{1}{Z} \exp(-H(x))
+\]
+where:
+\begin{itemize}
+    \item $H: \mathcal{X} \to \mathbb{R}$ is the \textbf{energy function} (also called \textbf{potential} or \textbf{cost function})
+    \item $Z = \int p(x)\exp(-H(x))\, dx$ is the \textbf{partition function}
+\end{itemize}
+
+If $H$ is linear in the parameters, we have an exponential family distribution.
+\end{definition}
+
+\subsection{The Potts and Ising Models}
+
+\begin{definition}[The Potts Model]
+The Potts model is defined as:
+\[
+p(\theta_1, \ldots, \theta_n) = \frac{1}{Z} \exp\left(\sum_{ij} w_{ij} \mathbb{1}[\theta_i = \theta_j]\right)
+\]
+where the sum is over pairs of adjacent vertices, and $w_{ij}$ are the edge weights.
+\end{definition}
+
+\begin{definition}[The Ising Model]
+The Ising model is a Potts model with binary variables $\theta_i \in \{-1, +1\}$ and weights $w_{ij} \in \{0, 1\}$:
+\[
+p(\theta_1, \ldots, \theta_n) = \frac{1}{Z(\beta)} \exp\left(\beta \sum_{ij} \mathbb{1}[\theta_i = \theta_j]\right)
+\]
+\end{definition}
+
+\begin{remark}[Parameter Interpretation in Potts Model]
+In the Potts model, the ratio:
+\[
+\frac{p(\theta_i = \beta_j)}{p(\theta_i \neq \beta_j)} = \exp(\beta w_{ij})
+\]
+\begin{itemize}
+    \item When $w_{ij} > 0$: leads to $\geq 1$, preferring equal states (smoothness)
+    \item When $w_{ij} < 0$: leads to $< 1$
+\end{itemize}
+\end{remark}
+
+\begin{remark}[Inverse Temperature]
+The parameter $\beta$ is the \textbf{inverse temperature}:
+\begin{itemize}
+    \item As $\beta \uparrow$: the model becomes "colder", more deterministic, and more smoothed. Very heavy penalty on boundary violations. Boundaries only appear where forced by conflicting data or very negative weights.
+    \item As $\beta \downarrow$: the model becomes "hotter", more random. Weaker coupling, flatter distribution, closer to uniform.
+\end{itemize}
+\end{remark}
+
+\subsection{Spatial Models and Smoothing}
+
+\begin{definition}[Spatial Model]
+A spatial model encodes each observation $X_i$ through a likelihood $\mathcal{L}(x_i|\theta_i)$ with prior $P(\theta_i)$ coming from an MRF:
+\[
+\mathcal{L}(x_i|\theta_i) \text{ is like emission probability, similar to an HMM}
+\]
+\end{definition}
+
+\begin{remark}[Spatial Smoothing with MRF]
+For positive weights, an MRF encourages the model to explain neighbouring observations $X_i$ and $X_j$ using the same parameter values.
+\end{remark}
+
+\subsection{Bayesian Mixture Models}
+
+\begin{definition}[Bayesian Mixture Model]
+A Bayesian mixture model is defined as:
+\[
+P(x) = \sum_{k=1}^K c_k p(x|\theta_k)
+\]
+where:
+\begin{itemize}
+    \item $p(x|\theta_k)$ is an exponential family distribution
+    \item $(\theta_1, \ldots, \theta_K)$ are drawn i.i.d.\ from a prior distribution $P(\theta_k)$
+    \item $c_1, \ldots, c_K$ are sampled from a $K$-dimensional Dirichlet distribution
+\end{itemize}
+\end{definition}
+
+\subsection{Markov Chains and MCMC}
+
+\begin{definition}[Continuous Markov Chain]
+A continuous Markov chain is defined by:
+\begin{itemize}
+    \item An initial distribution $P_{\text{init}}$
+    \item A conditional probability (transition probability or transition kernel) $p(x|y)$
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Invariant Distribution in Continuous MC]
+A distribution is \textbf{invariant} for a Markov chain if:
+\[
+\int \mu_y(y) P_{\mu,\nu}(x) \, dx = P_{\mu,\nu}(y)
+\]
+This is the continuous analogue of the discrete case: $\sum_j p_j (Pm\nu)_j = (Pm\nu)_j$
+\end{definition}
+
+\begin{definition}[Detailed Balance]
+A transition kernel $T(x \to x')$ satisfies \textbf{detailed balance} with respect to target distribution $\pi(x)$ if:
+\[
+\pi(x) T(x \to x') = \pi(x') T(x' \to x), \quad \forall \text{ pair } (x, x')
+\]
+This implies stationarity: $\int \pi(x) T(x \to x') \, dx = \pi(x')$
+\end{definition}
+
+\subsection{Metropolis-Hastings Algorithm}
+
+\begin{definition}[Metropolis-Hastings Algorithm]
+The Metropolis-Hastings algorithm proposes a candidate $x' \sim g(x \to x')$ and accepts it with probability:
+\[
+A(x \to x') = \min\left(1, \frac{\pi(x') g(x' \to x)}{\pi(x) g(x \to x')}\right)
+\]
+
+The resulting transition kernel is:
+\[
+T(x' \to x) = g(x' \to x) A(x' \to x)
+\]
+
+To implement this:
+\begin{enumerate}
+    \item Generate $X^* \sim U[-1,1]$ and $U_i \sim \text{Unif}(0,1)$
+    \item If $U_i \leq A(x'|x)$, accept and set $X_{i+1} = x^*$
+    \item Otherwise, keep $X_{i+1} = X_i$
+\end{enumerate}
+\end{definition}
+
+% PAGE 10 CONTENT
+
+\section{Advanced MCMC and Optimization Methods}
+
+\subsection{Stochastic Hill Climbing}
+
+\begin{remark}[Stochastic Hill Climbing]
+In Metropolis-Hastings, we accept candidate $x'$ if:
+\[
+\pi(x') g(x' \to x) > \pi(x) g(x \to x')
+\]
+\begin{itemize}
+    \item We always accept the proposed value $X_{i+1}$ if it increases probability under $\pi$
+    \item If it decreases the probability, we accept it with some probability
+    \item This is gradient ascent on $\pi$, in the direction of increasing probability $p$
+    \item It still maintains exploration, avoiding trapping in local maxima
+\end{itemize}
+\end{remark}
+
+\subsection{Global Balance and Convergence}
+
+\begin{definition}[Global Balance]
+The condition:
+\[
+\sum_j \pi(x) T(x \to x') = \pi(x')
+\]
+is called \textbf{global balance}. Detailed balance is a stronger, pairwise version.
+\end{definition}
+
+\subsection{Burn-in and Mixing Time}
+
+\begin{definition}[Burn-in and Mixing Time]
+The number $m$ of steps required until $P_m$ (the $m$-step distribution) converges to $\pi$ is called the \textbf{mixing time}. The first $m$ samples are called the \textbf{burn-in phase} or \textbf{discard phase}.
+\end{definition}
+
+\begin{remark}[Autocorrelation Function]
+Use the autocorrelation function to check after burn-in. If the autocorrelation is close to 0, create i.i.d samples by picking every $L$ steps (where autocorrelation is close to 0).
+\end{remark}
+
+\subsection{Approximation by Gaussian Distribution}
+
+\begin{remark}[Unimodal Approximation]
+If $\pi$ is unimodal and can be roughly approximated by a Gaussian, then $\text{Var}[p]$ should be chosen as the smallest covariance component of $\pi$.
+\end{remark}
+
+\subsection{Full Conditional Distributions}
+
+\begin{definition}[Full Conditional Distribution]
+The full conditional distribution of $X_d$ is:
+\[
+p(x_d | x_1, \ldots, x_{d-1}, x_{d+1}, \ldots, x_D), \text{ given } P(X) \text{ a distribution on } \mathbb{R}^D
+\]
+\end{definition}
+
+\subsection{Gibbs Sampler}
+
+\begin{definition}[Gibbs Sampler]
+Given a vector $X_i$, we generate $X_{i+1}$ as follows:
+\[
+X_{i+1,1} \sim P(\cdot | X_{i,2}, \ldots, X_{i,D})
+\]
+\[
+X_{i+1,d} \sim P(\cdot | X_{i,1}, \ldots, X_{i,d-1}, X_{i+1,d+1}, \ldots, X_{i,D})
+\]
+\[
+X_{i+1,D} \sim P(\cdot | X_{i+1,1}, \ldots, X_{i+1,D-1})
+\]
+
+For each dimension $d \in \{1, \ldots, D\}$, the variables $X_{1,d}, X_{2,d}, \ldots$ form again a Markov process and it is an MH sampler. So Gibbs with $D$ full conditionals is a family of coupled MH samplers.
+
+These MH samplers all have \textbf{acceptance probability 1}.
+\end{definition}
+
+\begin{remark}[Theoretical Result on Gibbs]
+The conditional densities satisfy:
+\[
+\pi(x \to x') = p(x_d | x_{\backslash d}), \quad p(x \to x') = p(x_d | x_d) = p(x_d | x_d) \text{ (rest didn't change when we sample } X_d \to X_d^*)
+\]
+\[
+\pi(x) = p(x_d, x_{\backslash d}) = p(x_d | x_{\backslash d}) p(x_{\backslash d}), \quad \pi(x') = p(x_d | x_{\backslash d}) p(x_{\backslash d})
+\]
+\[
+\text{so ratio} \frac{\pi(x') \pi(x \to x')}{\pi(x) \pi(x \to x')} = \frac{p(x_d | x_{\backslash d}) p(x_{\backslash d}) p(x_d | x_d)}{p(x_d | x_{\backslash d}) p(x_{\backslash d}) p(x_d | x_d)} = 1
+\]
+\end{remark}
+
+\begin{definition}[Gibbs on Ising Model]
+For the Ising model:
+\[
+\hat{p}(\theta_d | \theta_1, \ldots, \theta_{d-1}, \theta_{d+1}, \ldots, \theta_D) = \hat{p}(\theta_d | \theta_{\text{left}}, \theta_{\text{right}}, \theta_{\text{up}}, \theta_{\text{down}})
+\]
+\[
+= \exp\left(\beta\left(1[\theta_d = \theta_{\text{left}}] + 1[\theta_d = \theta_{\text{right}}] + 1[\theta_d = \theta_{\text{up}}] + 1[\theta_d = \theta_{\text{down}}]\right)\right)
+\]
+\end{definition}
+
+\subsection{Gradient-Based Methods}
+
+\begin{definition}[Gradient of a Scalar Function]
+The gradient $\nabla f(x)$ of $f: \mathbb{R}^d \to \mathbb{R}$ at a point $x \in \mathbb{R}^d$ is a vector in the domain $\mathbb{R}^d$ in the direction in which $f$ increases most rapidly at $x$.
+\end{definition}
+
+\begin{remark}[Orthogonality to Contour Lines]
+The gradient is orthogonal to contour lines.
+\end{remark}
+
+\subsection{Newton's Method}
+
+\begin{definition}[Newton's Method]
+Newton's method minimizes with updates:
+\[
+X_{i+1} = X_i - \frac{\nabla f(x_i)}{f'(x_i)}
+\]
+
+With alternative formulation:
+\[
+X_{i+1} = X_i - f'(x_i)^{-1} \nabla f(x_i), \quad \text{or} \quad X_{i+1} = X_i - H^{-1}(x_i) \nabla f(x_i)
+\]
+\end{definition}
+
+\subsection{Barrier Function and Interior Point Methods}
+
+\begin{definition}[Barrier Function]
+A barrier function $t$ approximates the constraint by a smoothing function, e.g., $g_t(x) = -\frac{1}{t} \log(-x)$
+\end{definition}
+
+\begin{remark}[Constrained Optimization with Barrier Function]
+Interior point methods approximately solve $\min f(x)$ s.t. $g_i(x) \leq 0 \Rightarrow \min(f(x) + \sum \beta_i g_i(x))$
+
+Convergence conditions: Robbins-Monro conditions
+\[
+\sum_{i=1}^{\infty} \alpha_i(t) \to \infty, \quad \sum_{i=1}^{\infty} \alpha_i(t)^2 < \infty
+\]
+
+Points arbitrarily far from $y_0$ are reachable. Also required in ordinary gradient descent.
+\end{remark}
+
+\subsection{Stochastic Gradient Descent}
+
+\begin{definition}[Stochastic Gradient Descent]
+Stochastic gradient descent uses:
+\[
+\hat{x}_{i+1} = \hat{x}_i - \alpha(n) \nabla \hat{f}(x_i)
+\]
+with $\nabla \hat{f}(x) = \nabla f(x) + \varepsilon$, where $\mathbb{E}[\varepsilon] = 0$.
+
+Convergence conditions: Robbins-Monro conditions
+\[
+\sum_{i=1}^{\infty} \alpha_i(t) \to \infty, \quad \frac{\text{finite variance}}{(\text{Var}(\alpha_n)\hat{x}_i)^2} \text{ and} \quad \text{Var}\left[\sum_{i=1}^{\infty} \alpha_i(n)\varepsilon_i\right] = \left(\sum_{n=1}^{\infty} \alpha_n^2\right)^2
+\]
+\end{definition}
+
+\end{document}
