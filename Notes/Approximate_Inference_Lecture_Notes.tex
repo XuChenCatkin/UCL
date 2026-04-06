@@ -31,9 +31,28 @@
 
 These lecture notes cover approximate inference methods for probabilistic graphical models. The course develops techniques for computing with complex distributions where exact inference is intractable.
 
-\newpage
+\vspace{0.5cm}
+\noindent\textbf{Course Structure:}
+\begin{enumerate}
+    \item \textbf{Foundation (Sections 1-3):} Graphical models, conditional independence, exact inference algorithms (polytrees, junction trees)
+    \item \textbf{Approximate Inference Methods (Sections 4-9):} Variational inference, expectation propagation, loopy belief propagation
+    \item \textbf{Theoretical Foundations (Sections 10-11):} Bethe free energy, convex duality, connection to statistical physics
+    \item \textbf{Applications and Extensions (Sections 12-15):} Model selection, Gaussian processes, Boltzmann machines, deep learning approaches
+\end{enumerate}
 
-% PAGE 1 CONTENT
+The core mathematical framework builds progressively: from exact inference on trees, to approximate inference on general graphs, to the theoretical justification via variational bounds and convex optimization.
+
+\newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part I: Foundations --- Graphical Models and Exact Inference}
+\end{center}
+\vspace*{1cm}
+\nobreak
+
+The foundation of this course rests on understanding graphical models and their induced conditional independence structures. We begin with exact inference algorithms on trees, which serve as the basis for understanding approximate inference on graphs with loops.
+
+\newpage
 
 \section{Graphical Models and Conditional Independence}
 
@@ -58,10 +77,10 @@ P(X, Y | V) = P(X | V) P(Y | V)
 Equivalently, $P(X | Y, V) = P(X | V)$. In graphical models, this holds when every path between $X$ and $Y$ contains some variable in $V$ (for undirected graphs or specific graph types).
 \end{definition}
 
-\subsection{Variables are Neighbours}
+\subsection{Neighbourhood Definition}
 
-\begin{remark}[Neighbourhood Relationship]
-Variables are neighbours if they share a common factor, meaning there exists a factor that references both variables.
+\begin{remark}[Neighbourhood Relationship in Graphical Models]
+In factor models, variables are neighbours if they share a common factor, meaning there exists a factor that references both variables.
 \end{remark}
 
 \subsection{Markov Property}
@@ -113,49 +132,59 @@ These are Bayesian networks.
 \subsection{Bayes-Ball Algorithm}
 
 \begin{remark}[Bayes-Ball Algorithm]
-Can you get a ball from $X$ to $Y$ without being blocked by $V$? This determines conditional independence relationships:
+The Bayes-Ball algorithm determines conditional independence in DAGs by asking: can a ball travel from $X$ to $Y$ without being blocked by conditioning set $V$? This determines $X \perp Y | V$.
 
+\textbf{Rules:}
 \begin{itemize}
-    \item \textbf{Nodes } $V \in V$ pass balls down or up chains: $\Rightarrow V \to$ or $\leftarrow V$
+    \item \textbf{Nodes not in } $V$: Balls pass through (either direction on chain)
     
-    \item \textbf{Nodes } $V \notin V$, bounce balls from children to children via parent $V$ (nodes receive via children-to-children paths where paths continue)
+    \item \textbf{Nodes in } $V$: Block balls traveling along edges involving two children or arrows into the node
+    
+    \item \textbf{At v-structures} ($X \leftarrow Z \rightarrow Y$): Block balls unless $Z$ or its descendants are in $V$
 \end{itemize}
 
-\textbf{Blocking rule in DAG:} $P_a(X) \cup d(X) \cup \text{pa}(X)$?
+\textbf{Blocking set:} A path from $X$ to $Y$ is blocked by $V$ if:
+\begin{itemize}
+    \item There exists a non-collider node $C$ on the path with $C \in V$, or
+    \item There exists a collider node $C$ on the path with $C \notin V$ and no descendant of $C$ is in $V$
+\end{itemize}
+
+If no unblocked path exists from $X$ to $Y$ given $V$, then $X \perp Y | V$.
 \end{remark}
 
 \subsection{Markov Boundary for X in DAG}
 
 \begin{remark}[Markov Boundary in Directed Acyclic Graphs]
-The Markov boundary $\{ \text{pa}(X) \cup \text{ch}(X) \cup \text{pa}(\text{ch}(X)) \}$?
-
-Every graph $G$ implies conditional independence statements (CIS) $-\{X_i \perp Y | U\}$ for i.i.d.
-
-For each set $C$, we can define a family of distributions that satisfy all constraints in $C$. We have:
+In a DAG, the Markov boundary of $X$ consists of: parents, children, and co-parents of children.
 \[
-p_C(\theta) = \{ P(Z) : P(X_i, Y_f | V_f) = P(Z | V_f) P(Y_f | U) \text{ for } \forall \text{ } Y_f, V | U \text{ in } C \}
+\text{MB}(X) = \text{pa}(X) \cup \text{ch}(X) \cup \text{pa}(\text{ch}(X))
 \]
 
-Independence view: $G$ may also encode a family of distributions by functional form:
-\[
-P_G = \{ P(Z) : P(Z) = \frac{1}{Z} \prod_i f_i(V_{C_i}) \text{ for some non-negative functions } f_i \}
-\]
-
-\begin{itemize}
-    \item For directed graphs: $P_G = p_C(\theta)$ — $P(Z) = \prod_i P(X_i | \text{pa}(i))$ — global Markov $\Leftrightarrow$ factorization
-    
-    \item For undirected graphs: $P_G = p_C(\theta)$ if all distributions are positive, i.e., $p(z) > 0$ for all $z$ (Hammersley-Clifford Theorem) — $P(Z) = \frac{1}{Z} \prod_i f_i(Z_{C_i})$ by cliques
-    
-    \item For factor graphs, there are some cases $P_G \neq p_C(\theta)$
-    
-    \item \textbf{Expressive advantage:} Every undirected model can be written as a factor graph, but not every factor graph collapses to an undirected graph with same family.
-\end{itemize}
+This is the minimal set such that $X \perp \text{(all other variables)} | \text{MB}(X)$.
 \end{remark}
 
-\subsection{Adding Edges and Conditional Independence}
+\subsection{Equivalence between Graphs and Families of Distributions}
 
-\begin{remark}[Edge Addition Effects]
-Adding edges to a graph $\Rightarrow$ removing conditional independence statements $\Rightarrow$ conditional independence set shrinks $\Rightarrow$ family of distributions enlarges. Denser graphs being more expressive but less constrained in conditional independence.
+\begin{remark}[Graphs Induce Families of Distributions]
+A graph $G$ induces a family of distributions by defining conditional independence statements (CIS). For any graph:
+\begin{itemize}
+    \item \textbf{Directed graphs (DAGs):} $P(Z) = \prod_i P(X_i | \text{pa}(i))$ — global Markov implies factorization
+    \item \textbf{Undirected graphs:} By Hammersley-Clifford theorem, positive distributions satisfying all global Markov properties factor as: $P(Z) = \frac{1}{Z} \prod_c f_c(Z_{C_c})$ where cliques $C_c$ correspond to maximal complete subgraphs
+    \item \textbf{Factor graphs:} Can represent families not capturable by undirected graphs alone (more expressive)
+\end{itemize}
+
+All conditional independence statements implied by a graph $G$ are preserved in the corresponding family of distributions.
+\end{remark}
+
+\subsection{Adding Edges Changes Expressivity}
+
+\begin{remark}[Effect of Adding Edges to Graphs]
+Adding edges to a graph $G$ removes conditional independence assertions from the induced family:
+\[
+G' = G + \text{edge} \Rightarrow \mathcal{P}_{G'} \supseteq \mathcal{P}_{G}
+\]
+
+The new family is larger since we've removed constraints. This means denser graphs are more expressive but less constrained by conditional independence.
 \end{remark}
 
 \subsection{Polytrees}
@@ -186,8 +215,6 @@ P(Z) = P(X_r) \prod_{i \neq r} P(X_i | X_{\text{pa}(i)}) = \prod_{e \in E} f_{uv
 \end{definition}
 
 \newpage
-
-% PAGE 2 CONTENT
 
 \section{Polytrees, Message Passing, and Factor Models}
 
@@ -324,8 +351,6 @@ This allows exact inference on polytree-structured graphs through efficient mess
 
 \newpage
 
-% PAGE 3 CONTENT
-
 \section{Junction Trees and Message Passing Algorithms}
 
 \subsection{Converting Graphs While Preserving Distributions}
@@ -454,8 +479,16 @@ where $Z(\theta)$ is the partition function. The EM algorithm iterates between:
 \end{remark}
 
 \newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part IV: Applications and Extensions}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 4 CONTENT
+The approximate inference methods developed in Part II have broad applicability. We now examine concrete applications: model comparison and selection, Gaussian processes as a nonparametric approach to regression, Boltzmann machines as classical models of distributed computation, and modern deep learning approaches that combine neural networks with variational inference.
+
+\newpage
 
 \section{Model Selection and Bayesian Inference}
 
@@ -601,8 +634,6 @@ Optimization proceeds via gradient ascent in $\log P(X | X, K)$.
 \end{definition}
 
 \newpage
-
-% PAGE 5 CONTENT
 
 \section{Gaussian Processes and Latent Variable Models}
 
@@ -752,9 +783,7 @@ This simultaneously maximizes information transmission through the network and e
 
 \newpage
 
-% PAGE 6 CONTENT
-
-\section{Advanced Models: State Machines and Boltzmann Machines}
+\section{Advanced Models: Boltzmann Machines}
 
 \subsection{Kurtosis and Non-Gaussianity}
 
@@ -767,9 +796,9 @@ Kurtosis measures the non-Gaussianity of a source:
 A key insight from the Central Limit Theorem: linear mixtures of independent non-Gaussian sources tend toward a more Gaussian distribution, driving kurtosis toward 0. This property makes kurtosis useful for identifying directions that maximize non-Gaussianity in ICA.
 \end{remark}
 
-\subsection{Nonlinear State-Space Models}
+\subsection{Extended Kalman Filter (EKF)}
 
-\begin{definition}[Extended Kalman Filter (EKF)]
+\begin{definition}[Extended Kalman Filter]
 For nonlinear state-space models with nonlinear dynamics and observation functions, the Extended Kalman Filter approximates the posterior by linearizing around the current estimate:
 
 \begin{align*}
@@ -777,18 +806,7 @@ Z_{t+1} &= f(Z_t^*, u_t) + \frac{\partial f}{\partial z}\bigg|_{\hat{z}_t} (Z_t 
 X_t &= g(\hat{Z}_t^*, u_t) + \frac{\partial g}{\partial z}\bigg|_{\hat{z}_t} (Z_t - \hat{Z}_t^*) + V_t
 \end{align*}
 
-where $W_t, V_t$ are typically still Gaussian. Rewriting with linearized coefficients:
-\begin{align*}
-Z_{t+1} &\approx \tilde{D}_z u_t + \tilde{A}_z (Z_t - \hat{Z}_t^*) + W_t \\
-X_t &\approx \tilde{D}_z u_t + \tilde{C}_z (Z_t - \hat{Z}_t^*) + V_t
-\end{align*}
-
-The exogenous input $u_t$ is treated as a fixed realized value (observed). For prediction, we use:
-\[
-\hat{Z}_{t+1}^* = f(\hat{Z}_t^*, u_t), \quad \hat{X}_t^* = g(\hat{Z}_t^*, u_t)
-\]
-
-This allows approximate inference in nonlinear systems via the EKF and particle filters.
+The linearization enables approximate inference in nonlinear systems, with Kalman filter-style alternation between prediction and update steps.
 \end{definition}
 
 \subsection{Boltzmann Machines}
@@ -859,8 +877,16 @@ This model captures both document-topic and topic-word distributions, enabling u
 \end{definition}
 
 \newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part II: Approximate Inference Methods}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 7 CONTENT
+When exact inference becomes intractable (as with loopy graphs or continuous variables), we resort to approximate methods. The following sections develop the three main paradigms: variational inference, expectation propagation, and loopy belief propagation. All fundamentally rely on minimizing or bounding divergences between the true and approximate posteriors.
+
+\newpage
 
 \section{Variational Inference Methods}
 
@@ -1001,8 +1027,6 @@ The gap between the true log-evidence and the ELBO is:
 
 \newpage
 
-% PAGE 8 CONTENT
-
 \section{Complete Exponential Family VB and Advanced Methods}
 
 \subsection{Complete Exponential Family VB}
@@ -1121,8 +1145,6 @@ This factorization enables inducing variable methods for efficient inference in 
 
 \newpage
 
-% PAGE 9 CONTENT
-
 \section{Sigma-Point Filtering and Expectation Propagation}
 
 \subsection{Sigma-Point Filter}
@@ -1232,8 +1254,6 @@ This is known as \textbf{moment matching}: the parameters are chosen so that the
 \end{remark}
 
 \newpage
-
-% PAGE 10 CONTENT
 
 \section{Gaussian Process Approximations and Advanced EP Methods}
 
@@ -1404,8 +1424,6 @@ Note: For $\alpha < 1$, we have stable results with small updates from $\hat{f}_
 
 \newpage
 
-% PAGE 11 CONTENT
-
 \section{Loopy Inference and Loopy BP Methods}
 
 \subsection{Dealing with Loops}
@@ -1511,8 +1529,16 @@ For pseudo-marginals to be correct:
 \end{definition}
 
 \newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part III: Theoretical Foundations --- Convex Optimization and Duality}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 12 CONTENT
+The approximate inference methods of Part II can be understood through the lens of optimization theory. The Bethe free energy provides a principled objective for loopy belief propagation, while convex duality reveals the fundamental structure underlying all variational inference procedures.
+
+\newpage
 
 \section{Bethe Free Energy and Convex Duality}
 
@@ -1672,8 +1698,6 @@ Therefore:
 
 \newpage
 
-% PAGE 13 CONTENT
-
 \section{Convex Duality and Discrete MRF Inference}
 
 \subsection{KL Divergence and Duality}
@@ -1830,8 +1854,16 @@ We learn $f(x_i, \theta)$ instead of $\psi$.
 \end{definition}
 
 \newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part V: Modern Approaches --- Neural Networks and Generative Models}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 14 CONTENT
+Recent advances in machine learning combine neural networks with the approximate inference methods developed throughout this course. The following sections cover parameterized variational inference with deep generative models and contemporary approaches like diffusion models.
+
+\newpage
 
 \section{Deep Learning and Parameterized Variational Inference}
 
@@ -1972,8 +2004,6 @@ F(\varphi, \theta) \propto \frac{1}{2} \sum \log p(x_i, f_K(\ldots f_1(z_i^S)); 
 \end{definition}
 
 \newpage
-
-% PAGE 15 CONTENT
 
 \section{Diffusion Models and Score-Based Methods}
 
