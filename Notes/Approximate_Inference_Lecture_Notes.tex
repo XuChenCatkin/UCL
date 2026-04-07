@@ -17,9 +17,9 @@
 \newtheorem{remark}{Remark}[section]
 \newtheorem{example}{Example}[section]
 
-\title{COMP0085: Approximate Inference - Lecture Notes}
-\author{Comprehensive Course Notes}
-\date{}
+\title{COMP0085: Approximate Inference}
+\author{Xu Chen}
+\date{\today}
 
 \begin{document}
 
@@ -658,8 +658,10 @@ where $k(\mathbf{x}_i, \mathbf{x}_j)$ are the covariance kernel evaluations.
 \begin{definition}[Brownian Motion]
 Brownian motion is a Gaussian process with kernel function:
 \[
-k(s, t) = \mu \min(s, t)
+k(s, t) = \sigma^2 \min(s, t)
 \]
+
+where $\sigma^2$ is the variance coefficient per unit time (diffusion coefficient) of the process.
 \end{definition}
 
 \subsection{Gaussian Process Regression}
