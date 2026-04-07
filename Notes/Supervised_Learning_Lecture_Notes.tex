@@ -29,11 +29,32 @@
 
 \section*{Introduction}
 
-These lecture notes cover the fundamentals and advanced techniques in supervised learning. The course develops both theoretical understanding and practical methods for learning predictive models from labeled data.
+These lecture notes cover the theory and practice of supervised learning, where the goal is to learn a function that maps input features to output targets based on a labeled dataset.
+
+\vspace{0.5cm}
+\noindent\textbf{Course Structure:}
+\begin{enumerate}
+    \item \textbf{Foundations (Sections 1-3):} Core supervised learning problems: regression, binary classification, and multi-class classification
+    \item \textbf{Optimization \& Regularization (Sections 4-6):} Optimization theory, regularization techniques, and convergence analysis
+    \item \textbf{Advanced Methods (Sections 7-9):} Kernel methods, tree-based models, ensemble learning
+    \item \textbf{Statistical Learning Theory (Sections 10-13):} Generalization bounds, complexity measures, consistency results
+    \item \textbf{Online Learning (Sections 14-15):} Sequential learning in adversarial settings with experts and online algorithms
+\end{enumerate}
+
+The course develops both the practical algorithms used in machine learning and the theoretical foundations that explain when and why they work.
 
 \newpage
+\newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part I: Foundations --- Learning Paradigms}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 1 CONTENT
+We begin with the three core supervised learning problems: regression (continuous outputs), binary classification, and multi-class classification. These form the foundation for all subsequent methods.
+
+\newpage
 
 \section{Linear Regression Fundamentals}
 
@@ -158,13 +179,15 @@ We can extend linear regression by mapping features to a higher-dimensional spac
 where $\Phi \in \mathbb{R}^{n \times D}$ is the feature-mapped data matrix with feature dimension $D$.
 \end{definition}
 
-\subsection{Weak Inverse (Pseudoinverse)}
+\subsection{Pseudoinverse}
 
 \begin{definition}[Pseudoinverse]
-The pseudoinverse of $\Phi \in \mathbb{R}^{n \times D}$ is a matrix $\Phi^\dagger \in \mathbb{R}^{D \times n}$ such that:
+The pseudoinverse (Moore-Penrose inverse) of a matrix $\Phi \in \mathbb{R}^{n \times D}$ is denoted $\Phi^\dagger$ and defined as:
 \[
 \Phi \Phi^\dagger \Phi = \Phi \quad \text{and} \quad \Phi^\dagger \Phi \Phi^\dagger = \Phi^\dagger
 \]
+
+For full rank $\Phi$, $\Phi^\dagger = (\Phi^T \Phi)^{-1} \Phi^T$ (left pseudoinverse when $n > D$).
 \end{definition}
 
 \subsection{Kernel Functions and Positive Semi-Definite (PSD) Property}
@@ -175,47 +198,36 @@ A kernel function $k$ is an inner product $\Rightarrow k$ is PSD (positive semi-
 However, the converse $k \succeq 0 \Rightarrow k$ is a kernel (inner product) is not generally true. We need to have $k \succeq 0$ for any finite set on $X$ (Moore-Aronszajn theorem).
 \end{definition}
 
-\subsection{Instability of Pseudoinverse on Small Principal Directions}
+\subsection{Instability with Small Singular Values}
 
-\begin{remark}[Pseudoinverse Instability]
-Let $\Phi = U \Sigma V^T$ with rank $r \leq n$ and smallest singular value $\sigma_r = 10^{-8}$. Then:
+\begin{remark}[Instability of Pseudoinverse]
+The pseudoinverse $\Phi^\dagger$ can become numerically unstable when $\Phi$ has small singular values. If $\Phi = U\Sigma V^T$ with smallest nonzero singular value $\sigma_r$ very small, then:
 \[
-\hat{w} = V\Sigma^+ U^T y = V\Sigma^{-1} U^T y
+\Phi^\dagger = V\Sigma^{-1} U^T
 \]
 
-Let $x = U_n$ be the $n$-th column of $V$. Let $x' = (I+H)x$ and see:
-\[
-\|\hat{f}(x()) - \ell(x')\| = |\hat{w}^T x - w^T c(+z)x| = |z| \left|\frac{U_n^T \Sigma^+ U^T y}{\sigma_p}\right| = 10^8 z \left|\langle w, u_z\right|\right|
-\]
-
-(Indicates small weights)
+The inverse of small singular values becomes very large, amplifying noise in the prediction. This motivates the use of regularization (ridge regression) to stabilize the solution.
 \end{remark}
 
 \newpage
 
-% PAGE 2 CONTENT
 
 \section{Regularization and Projections}
 
-\subsection{Ridge Regression}
+\subsection{Ridge Regression Solution}
 
-\begin{definition}[Ridge Regression with Regularization]
-Ridge regression adds an $\ell_2$ penalty to prevent overfitting:
+\begin{definition}[Ridge Regression with $\\ell_2$ Regularization]
+Ridge regression adds $\ell_2$ regularization to prevent overfitting from small singular values:
 \[
-\hat{w}_\lambda = \arg\min_w \frac{1}{n} \sum_{i=1}^n (\ell(f(x_i)) - y_i)^2 + \lambda \|w\|^2 \quad \text{(make } w \text{ not too large)}
+\hat{w}_\lambda = \arg\min_w \left[\frac{1}{n} \sum_{i=1}^n (\Phi w - y)_i^2 + \lambda \|w\|^2\right]
 \]
 
-The solution is:
+The closed-form solution is:
 \[
-\hat{w}_\lambda = V\Sigma^+ U^T y = (\Sigma^\Sigma + \lambda I)^{-1} \Sigma^T y
+\hat{w}_\lambda = (\Phi^T\Phi + \lambda I)^{-1} \Phi^T y
 \]
 
-The smallest singular value is always larger than:
-\begin{itemize}
-    \item Since eigenvalues of $\Sigma^T\Sigma$ are $\{\mu_i + \lambda\}$ 
-    \item And $\Sigma^T\Sigma + \lambda I$ has eigenvalues $\sigma_i^2 + \lambda$
-    \item So $(\Sigma^\Sigma + \lambda I)^{-1}$ has $\frac{\sigma_i^2}{\sigma_i^2 + \lambda} \ll \frac{1}{\sigma_i}$
-\end{itemize}
+This always exists since $\Phi^T\Phi + \lambda I$ is positive definite for $\lambda > 0$.
 \end{definition}
 
 \subsection{Eigenvalue Perturbation}
@@ -332,8 +344,17 @@ where $A := (y_i y_j x_i^T x_j)_{ij}$, and $(\alpha_i x_j y_j) = (\text{osH Ax} 
 \end{definition}
 
 \newpage
+\newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part III: Advanced Supervised Learning Methods}
+\end{center}
+\vspace*{1cm}
+\nobreak
 
-% PAGE 3 CONTENT
+Beyond linear models and simple decision trees lie powerful techniques for handling complex, nonlinear relationships. We explore kernel methods for implicit feature spaces, tree-based methods, and ensemble approaches that combine multiple weak learners.
+
+\newpage
 
 \section{Kernel Methods and Advanced SVM}
 
@@ -461,18 +482,31 @@ F(z) \leq F(w) + \nabla F(w)^T (z - w) + \frac{M}{2} \|z - w\|^2
 When $\eta = (\mu_k - \eta) \nabla F(\mu_k)$, with $\eta > 0$.
 \end{definition}
 
-\subsection{M-Smoothness Condition}
+\subsection{M-Smoothness and Gradient Lipschitz Continuity}
 
-\begin{definition}[M-Smoothness]
-A function $F: \mathbb{R}^d \to \mathbb{R}$ is $M$-smooth if it has Lipschitz continuous gradient, with Lipschitz constant $M$:
+\begin{definition}[M-Smoothness Condition]
+A differentiable function $F: \mathbb{R}^d \to \mathbb{R}$ is $M$-smooth if its gradient is Lipschitz continuous with constant $M$:
 \[
-\|\nabla F(w) - \nabla F(z)\| \leq M \|z - w\| \quad \forall w, z \in \mathbb{R}^d
+\|\nabla F(w) - \nabla F(z)\| \leq M \|w - z\| \quad \forall w, z \in \mathbb{R}^d
 \]
+
+Equivalently, the Hessian is bounded: $\|\nabla^2 F(w)\| \leq M$ everywhere.
 \end{definition}
 
 \newpage
 
-% PAGE 4 CONTENT
+
+\newpage
+\vspace*{2cm}
+\begin{center}
+    \section*{\Large Part II: Optimization \& Regularization}
+\end{center}
+\vspace*{1cm}
+\nobreak
+
+When learning from finite data, we must balance fitting the training data with avoiding overfitting. This section develops optimization theory (convexity, smoothness) and regularization techniques to achieve this balance.
+
+\newpage
 
 \section{Convexity, Smoothness, and Optimization Theory}
 
@@ -529,29 +563,31 @@ Then $\nabla E_S(w) = 2(C_S + \lambda I)w - \frac{m}{n} \sum_i y_i x_i$, where $
 Hence $\|\nabla E_S(w) - \nabla E_S(z)\| \leq 2 \|(C_S + \lambda I)\| \|w - z\|$, where $\|(C_S + \lambda I)\|$ is the operator norm and takes the largest singular value (PCA).
 \end{definition}
 
-\subsection{Subgradients}
+\subsection{Subgradients and Non-Smooth Functions}
 
 \begin{definition}[Subgradient]
-Let $F: \mathbb{R}^d \to \mathbb{R}$ be a differentiable and $M$-Lipschitz function. By the definition of subgradients:
+For a convex function $F: \mathbb{R}^d \to \mathbb{R}$, a vector $g \in \mathbb{R}^d$ is a subgradient of $F$ at $w$ if for all $z \in \mathbb{R}^d$:
 \[
-\|F(\mathbf w) - \nabla F(\mathbf z)\|^* \leq 2 \|w - z\|
+F(z) \geq F(w) + g^T(z - w)
 \]
 
-\textbf{Note:} The set of all subgradients of $F$ in $w$ is the sub-differential and is denoted as $\partial F(w)$.
+The set of all subgradients at $w$ is the subdifferential $\partial F(w)$. For differentiable functions, $\partial F(w) = \{\nabla F(w)\}$.
 \end{definition}
 
-\subsection{Subgradient Concept}
+\subsection{Subgradient Descent Method}
 
-\begin{definition}[Subgradient Method]
-For L-Lipschitz function $F$, let $(w_k)_{k=1}^{\infty}$ be a sequence obtained via subgradient method:
+\begin{definition}[Subgradient Descent]
+For a convex (but possibly non-smooth) function $F$ with $L$-Lipschitz subgradients, the subgradient descent method iterates:
 \[
-F(w_k^{\text{opt}}) - F(w_*) \leq \frac{\|w_0 - w_*\|^2}{2\sum_{k} D_k} + \frac{L^2}{2} \sum_{k} D_k
+w_{t+1} = w_t - \eta_t g_t
 \]
+where $g_t \in \partial F(w_t)$ is any subgradient at $w_t$, and $\eta_t > 0$ is the step size.
 
-If we choose $\eta = \frac{1}{\sqrt{E}}$, then we have:
+With step size $\eta_t = \frac{1}{L\sqrt{t}}$, the method achieves $O(1/\sqrt{T})$ convergence rate:
 \[
-F(w_k^{\text{opt}}) - F(w_*) \leq \frac{1}{2\sqrt{E}} \left(\|w_0 - w_*\| + L^2\right)
+\mathbb{E}[F(\bar{w}_T) - F(w^*)] \leq \frac{L\|w_0 - w^*\|}{\sqrt{T}}
 \]
+where $\bar{w}_T = \frac{1}{T}\sum_{t=1}^T w_t$.
 \end{definition}
 
 \section{Tree-Based Methods}
@@ -609,26 +645,23 @@ f(x) = \arg\max_k \frac{\sum_{x_i: y_i=k} I[x \in \mathcal{R}_p]}{\sum_{x_i} I[x
 
 \newpage
 
-% PAGE 5 CONTENT
 
 \section{Ensemble Methods and Boosting}
 
 \subsection{Classification Tree Impurity Measures}
 
 \begin{definition}[Node Impurity Measures]
-In classification trees, we can choose different $\varOp(T)$ of node impurity:
+In classification trees, we can choose different impurity measures for deciding splits:
 
 \begin{enumerate}
-    \item \textbf{Misclassification error}: $(1 - P_{p,p(p)})$ where $\mathbb{1}[x_i \in \mathcal{R}_p \neq P_{pkp}$ (In each region, only pick the highest one and rest is misclassified)
+    \item \textbf{Misclassification error}: Fraction of misclassified samples in the node. Less sensitive to changes in probabilities.
     
-    \item \textbf{Gini index}: $\sum_k P_{pk}(1 - p_k)$
+    \item \textbf{Gini index}: $G = \sum_{k=1}^K p_k(1 - p_k)$ where $p_k$ is the proportion of class $k$ in the node. Ranges from 0 (pure node) to $1 - 1/K$ (maximally impure).
     
-    \item \textbf{Cross entropy}: $\sum_k P_{pk} \log \frac{1}{P_{pk}} = -\sum_k p_k \log p_k$
+    \item \textbf{Cross entropy (Information gain)}: $H = -\sum_{k=1}^K p_k \log p_k$. Sensitive to changes in probabilities, especially smaller frequencies.
 \end{enumerate}
 
-Cross entropy and Gini index are used to grow the tree. They are more sensitive to changes in the node probabilities. They have higher derivative around $0 >> 0.1$ and $0.9 >> 1.0$, encourage selection, but smaller around $0.5$.
-
-Classification error is often used to prune the tree.
+\textbf{Practical use:} Gini index and cross entropy are more sensitive and preferred for tree growth. Misclassification error is often used for pruning to match the 0-1 loss on the test set.
 \end{definition}
 
 \subsection{Chernoff Bound}
@@ -689,35 +722,23 @@ Boosting is a weak learner slightly better than random guessing:
 
 \subsection{Adaboost}
 
-\begin{definition}[Adaboost]
+\begin{definition}[Adaboost Algorithm]
 Training data $S = \{(x_1, y_1), \ldots, (x_m, y_m)\}$. Initialize $D_1(i) = \cdots = D_1(m) = \frac{1}{m}$.
 
-\begin{center}
-\begin{tabular}{|c|c|}
-\hline
-$t$ & 1, 2, 3, \ldots, T \quad \text{(time)} \\
-\hline
-$i$ & $\frac{1}{m}$ \\
-\hline
-2 & $\frac{1}{m}$ & $D_t(i) = \frac{D_t^t e^{-\alpha_t; h_t(x_i)}}$ & $y_i h_t(x_i) \leq 0$ of misclassified, and $e^{-\alpha_t; h_t(x_i)} > 0$, increase weight \\
-\hline
-\vdots & \vdots & \\
-\hline
-$m$ & $\frac{1}{m}$ & & \\
-\hline
-(data) & \multicolumn{2}{|c|}{$\alpha_t$: weight on weak learner $t$, $\alpha_t = \frac{1}{2} \log \frac{1-\varepsilon_t}{\varepsilon_t}$ ($2\varepsilon_t, h_t : ~ f(x) := \sum \alpha_t h_t(x)$)} \\
-\hline
-& & $h_t$: weak learner generated at time $t$ & $H(x) = \text{sign}(f(x))$ \\
-\hline
-& & $\varepsilon_t$: weighted error of $h_t$ at $t$, $\varepsilon_t = \sum_{i=1}^m D_t(i) \mathbb{1}\left[\frac{h_t(x_i) \neq y_i}{}\right]$ \\
-\hline
-\end{tabular}
-\end{center}
+\textbf{For } $t = 1, 2, \ldots, T$ \textbf{ do}:
+\begin{itemize}
+    \item Train weak learner $h_t$ to minimize weighted error: $\varepsilon_t = \sum_{i=1}^m D_t(i) \mathbb{1}[h_t(x_i) \neq y_i]$
+    \item Compute weight: $\alpha_t = \frac{1}{2} \log \frac{1-\varepsilon_t}{\varepsilon_t}$
+    \item Update distribution: $D_{t+1}(i) = \frac{D_t(i) e^{-\alpha_t y_i h_t(x_i)}}{Z_t}$ where $Z_t = \sum_i D_t(i) e^{-\alpha_t y_i h_t(x_i)}$
+\end{itemize}
+
+\textbf{Final classifier:} $H(x) = \text{sign}\left(\sum_{t=1}^T \alpha_t h_t(x)\right)$
+
+At each round, misclassified examples receive higher weight (multiplied by $e^{\alpha_t}$), forcing the weak learner to focus on harder examples.
 \end{definition}
 
 \newpage
 
-% PAGE 6 CONTENT
 
 \subsection{Adaboost Training Error Bound}
 
@@ -816,7 +837,6 @@ Bagging tends to reduce variance. Boosting tends to reduce bias.
 
 \newpage
 
-% PAGE 7 CONTENT
 
 \section{Theoretical Foundations: Empirical Risk and Generalization}
 
@@ -951,7 +971,6 @@ This demonstrates the importance of choosing an expressive enough hypothesis cla
 
 \newpage
 
-% PAGE 8 CONTENT
 
 \section{Rademacher Complexity and Advanced Generalization Bounds}
 
@@ -1057,7 +1076,6 @@ This shows that Lipschitz loss functions preserve and contract Rademacher comple
 
 \newpage
 
-% PAGE 9 CONTENT
 
 \section{McDiarmid Inequality, RKHS, and Optimization Methods}
 
@@ -1173,7 +1191,6 @@ showing quadratic (geometric) convergence after $t$ iterations.
 
 \newpage
 
-% PAGE 10 CONTENT
 
 \section{Online Learning with Experts}
 
@@ -1311,7 +1328,6 @@ This shows the cumulative loss is bounded by $\log n$, independent of the sequen
 
 \newpage
 
-% PAGE 11 CONTENT
 
 \section{Advanced Online Learning Algorithms}
 
@@ -1445,7 +1461,6 @@ The surrogate loss approach consists of three stages:
 
 \newpage
 
-% PAGE 12 CONTENT
 
 \section{Multi-Class Classification and Surrogates}
 
@@ -1568,7 +1583,6 @@ W_\lambda = \arg\min_{w \in \mathcal{G}_\text{grad}} \frac{1}{n}\sum_{i=1}^n \|(
 
 \newpage
 
-% PAGE 13 CONTENT
 
 \section{Convergence Analysis and Consistency}
 
