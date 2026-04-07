@@ -1,0 +1,1014 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+% Define theorem environments
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{algorithm}{Algorithm}[section]
+\newtheorem{remark}{Remark}[section]
+
+\title{COMP0089: Reinforcement Learning}
+\author{Xu Chen}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+
+These lecture notes provide a comprehensive treatment of reinforcement learning, covering the fundamental concepts of Markov decision processes, value functions, temporal difference methods, and policy gradient approaches. The material progresses from basic theoretical foundations through practical learning algorithms to advanced deep reinforcement learning techniques.
+
+\newpage
+
+\section{Fundamentals of Reinforcement Learning}
+
+\subsection{Returns and Discounting}
+
+\begin{definition}[Return]
+The return $G_t$ is the cumulative future reward starting from time step $t$:
+\[
+G_t = R_{t+1} + R_{t+2} + R_{t+3} + \cdots
+\]
+
+In undiscounted settings, this is simply the sum of all future rewards until the episode ends.
+\end{definition}
+
+\begin{definition}[Discounted Return with Discount Factor]
+The discounted return incorporates a discount factor $\gamma \in [0, 1)$ that weights immediate rewards more heavily than future rewards:
+\[
+G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}
+\]
+
+The discount factor determines the time horizon for decision making. When $\gamma$ is close to 1, the agent values long-term rewards; when $\gamma$ is close to 0, the agent prioritizes immediate rewards.
+\end{definition}
+
+\subsection{Markov Decision Processes}
+
+\begin{definition}[Markov Decision Process (MDP)]
+A Markov decision process is a tuple $(S, A, p, r, \gamma)$ where:
+\begin{itemize}
+    \item $S$ is the set of all possible states
+    \item $A$ is the set of all possible actions
+    \item $p(s' | s, a)$ is the transition probability: $P(S_{t+1} = s' | S_t = s, A_t = a)$
+    \item $r(s, a)$ is the expected reward function: $\mathbb{E}[R_{t+1} | S_t = s, A_t = a]$
+    \item $\gamma \in [0, 1)$ is the discount factor
+\end{itemize}
+
+The key defining property of an MDP is the Markov property: future states depend only on the current state and action, not on the history:
+\[
+P(S_{t+1} = s' | S_t = s, A_t = a) = P(S_{t+1} = s' | S_t = s, A_t = a, \text{history})
+\]
+
+This memoryless property allows for efficient dynamic programming solutions.
+\end{definition}
+
+\subsection{Policies}
+
+\begin{definition}[Policy]
+A policy is a mapping $\pi: S \times A \to [0, 1]$ that assigns probabilities $\pi(a | s)$ to actions in each state. A policy describes how the agent behaves:
+
+\begin{itemize}
+    \item \textbf{Stochastic policy}: $\pi(a|s)$ can be any probability distribution over actions
+    \item \textbf{Deterministic policy}: $\pi(a|s) \in \{0, 1\}$, selecting a single action per state
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Goals of Reinforcement Learning]
+The goal of an RL agent is to find a behavior policy that maximizes the expected return:
+\[
+\pi^* = \arg\max_\pi \mathbb{E}[G_0 | \pi]
+\]
+
+An optimal policy achieves the highest expected cumulative reward from any starting state.
+\end{definition}
+
+\section{Value Functions and the Bellman Equations}
+
+\subsection{Value Functions}
+
+\begin{definition}[State Value Function]
+The state value function $V_\pi(s)$ is the expected cumulative discounted reward obtained by starting in state $s$ and following policy $\pi$:
+\[
+V_\pi(s) = \mathbb{E}[G_t | S_t = s, \pi] = \mathbb{E}[R_{t+1} + \gamma V_\pi(S_{t+1}) | S_t = s]
+\]
+
+It represents how good it is to be in a given state under a particular policy.
+\end{definition}
+
+\begin{definition}[Action Value Function (Q-Function)]
+The action value function $Q_\pi(s, a)$ is the expected return from taking action $a$ in state $s$ and then following policy $\pi$:
+\[
+Q_\pi(s, a) = \mathbb{E}[G_t | S_t = s, A_t = a, \pi] = \mathbb{E}[R_{t+1} + \gamma V_\pi(S_{t+1}) | S_t = s, A_t = a]
+\]
+
+The relationship between $V$ and $Q$ under policy $\pi$ is:
+\[
+V_\pi(s) = \sum_a \pi(a|s) Q_\pi(s, a)
+\]
+\end{definition}
+
+\subsection{Bellman Equations}
+
+\begin{theorem}[Bellman Expectation Equations]
+For any policy $\pi$, the value functions satisfy the Bellman equations:
+
+\textbf{State-Value Bellman Equation:}
+\[
+V_\pi(s) = \sum_a \pi(a | s) \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) V_\pi(s') \right]
+\]
+
+\textbf{Action-Value Bellman Equation:}
+\[
+Q_\pi(s, a) = r(s, a) + \gamma \sum_{s'} p(s' | s, a) \sum_{a'} \pi(a' | s') Q_\pi(s', a')
+\]
+
+These recursive equations decompose the value of a state into the immediate reward plus the discounted value of successor states.
+\end{theorem}
+
+\begin{definition}[Optimal Policy]
+An optimal policy $\pi^*$ is any policy that achieves the maximum expected return from every state:
+\[
+\pi^*(a|s) = \begin{cases} 1 & \text{if } a = \arg\max_a Q^*(s, a) \\ 0 & \text{otherwise} \end{cases}
+\]
+
+Key fact: For any finite MDP, there exists at least one deterministic optimal policy.
+\end{definition}
+
+\begin{theorem}[Bellman Optimality Equations]
+The optimal value functions satisfy the Bellman optimality equations:
+
+\textbf{Optimal State-Value:}
+\[
+V^*(s) = \max_a \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) V^*(s') \right]
+\]
+
+\textbf{Optimal Action-Value:}
+\[
+Q^*(s, a) = r(s, a) + \gamma \sum_{s'} p(s' | s, a) \max_{a'} Q^*(s', a')
+\]
+
+Once we have the optimal value functions, the optimal policy is:
+\[
+\pi^*(s) = \arg\max_a Q^*(s, a)
+\]
+\end{theorem}
+
+\section{Theoretical Foundations: Operators and Fixed Points}
+
+\subsection{Contraction Mappings and Fixed Point Theory}
+
+\begin{definition}[Contraction Mapping]
+Let $X$ be a vector space equipped with a norm $\|\cdot\|$. A mapping $T: X \to X$ is a $\gamma$-contraction if for all $x_1, x_2 \in X$:
+\[
+\|T x_1 - T x_2\| \leq \gamma \|x_1 - x_2\|
+\]
+
+where $\gamma \in [0, 1]$ is the contraction coefficient. A contraction mapping brings points closer together under repeated application.
+\end{definition}
+
+\begin{theorem}[Banach Fixed Point Theorem]
+Let $X$ be a complete normed vector space and $T: X \to X$ a $\gamma$-contraction mapping. Then:
+
+\begin{enumerate}
+    \item $T$ has a unique fixed point $x^* \in X$ such that $Tx^* = x^*$
+    \item For any starting point $x_0 \in X$, the sequence $x_{n+1} = Tx_n$ converges to $x^*$ geometrically:
+    \[
+    \|x_n - x^*\| \leq \gamma^n \|x_0 - x^*\|
+    \]
+\end{enumerate}
+
+This theorem guarantees convergence of iterative algorithms based on contraction mappings.
+\end{theorem}
+
+\subsection{Bellman Operators}
+
+\begin{definition}[Bellman Optimality Operator]
+For a bounded function space, the Bellman optimality operator $T^*$ is defined pointwise as:
+\[
+(T^* f)(s) = \max_a \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) f(s') \right]
+\]
+
+Key properties:
+\begin{itemize}
+    \item $T^*$ is a $\gamma$-contraction with respect to the $L^\infty$ norm
+    \item The unique fixed point of $T^*$ is $V^*$
+    \item Value iteration $V_{k+1} = T^* V_k$ converges exponentially to $V^*$
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Bellman Expectation Operator]
+For a given policy $\pi$, the Bellman expectation operator $T^\pi$ is defined as:
+\[
+(T^\pi f)(s) = \sum_a \pi(a | s) \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) f(s') \right]
+\]
+
+Like $T^*$, the operator $T^\pi$ is a $\gamma$-contraction, and policy evaluation iterates converge to $V^\pi$.
+\end{definition}
+
+\section{Planning: Dynamic Programming Algorithms}
+
+\subsection{Policy Evaluation}
+
+\begin{definition}[Policy Evaluation (Prediction)]
+Given a policy $\pi$, policy evaluation estimates the value function $V_\pi$ through iterative application of the Bellman expectation equation:
+
+\textbf{Algorithm:}
+\begin{itemize}
+    \item Initialize $V(s) = 0$ for all $s \in S$
+    \item Repeat:
+    \[
+    V_{k+1}(s) \leftarrow \sum_a \pi(a | s) \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) V_k(s') \right]
+    \]
+    \item Until convergence: $\max_s |V_{k+1}(s) - V_k(s)| < \theta$
+\end{itemize}
+
+By the Banach fixed point theorem, this converges to $V^\pi$.
+\end{definition}
+
+\subsection{Policy Improvement and Iteration}
+
+\begin{theorem}[Policy Improvement Theorem]
+Given value estimates $V_k$ for policy $\pi_k$, if a new greedy policy is defined as:
+\[
+\pi_{k+1}(s) = \arg\max_a \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) V_k(s') \right]
+\]
+
+then the new policy is at least as good as the old policy: $V^{\pi_{k+1}}(s) \geq V^{\pi_k}(s)$ for all states $s$.
+\end{theorem}
+
+\begin{definition}[Policy Iteration]
+Policy iteration alternates between policy evaluation and policy improvement:
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Initialize policy $\pi_0$ arbitrarily
+    \item Repeat until convergence:
+    \begin{itemize}
+        \item \textit{Evaluation}: Compute $V^{\pi_k}$ using policy evaluation
+        \item \textit{Improvement}: $\pi_{k+1}(s) = \arg\max_a Q^{\pi_k}(s, a)$
+    \end{itemize}
+\end{enumerate}
+
+Policy iteration is guaranteed to converge to the optimal policy $\pi^*$ and optimal value function $V^*$.
+\end{definition}
+
+\subsection{Value Iteration}
+
+\begin{definition}[Value Iteration]
+Value iteration combines policy evaluation and improvement into a single update step:
+
+\textbf{Algorithm:}
+\begin{itemize}
+    \item Initialize $V(s) = 0$ for all $s$
+    \item Repeat until convergence:
+    \[
+    V_{k+1}(s) \leftarrow \max_a \left[ r(s, a) + \gamma \sum_{s'} p(s' | s, a) V_k(s') \right]
+    \]
+    \item Extract greedy policy: $\pi(s) = \arg\max_a Q^*(s, a)$
+\end{itemize}
+
+This is equivalent to applying the Bellman optimality operator: $V_{k+1} = T^* V_k$. Convergence is guaranteed by contraction mapping theory.
+\end{definition}
+
+\section{Multi-Armed Bandits and Exploration}
+
+\subsection{The Bandit Problem}
+
+\begin{definition}[Multi-Armed Bandit Problem]
+In the $k$-armed bandit problem, an agent selects from $k$ actions at each step, each with an unknown reward distribution. Unlike MDPs, there is only one state, and actions don't affect future states.
+
+Key quantities:
+\begin{itemize}
+    \item $Q^*(a) = \mathbb{E}[R_t | A_t = a]$ is the true value of action $a$
+    \item $Q_t(a)$ is the estimated value after $t$ steps
+    \item $\Delta_a = Q^*(a_*) - Q^*(a)$ is the regret of action $a$ relative to the optimal action $a_*$
+\end{itemize}
+
+The goal is to maximize cumulative reward, or equivalently, minimize total regret:
+\[
+R_T = \sum_{t=1}^T (Q^*(a_*) - Q^*(A_t)) = \sum_{a \neq a_*} \Delta_a N_T(a)
+\]
+\end{definition}
+
+\subsection{Exploration-Exploitation Strategies}
+
+\begin{definition}[Greedy and $\varepsilon$-Greedy]
+\textbf{Greedy action selection} always picks the action with highest estimated value:
+\[
+A_t = \arg\max_a Q_t(a)
+\]
+
+This is optimal if estimates are accurate, but poor during learning when estimates are uncertain.
+
+\textbf{$\varepsilon$-Greedy strategy} balances exploration and exploitation:
+\[
+A_t = \begin{cases}
+\arg\max_a Q_t(a) & \text{with probability } 1-\varepsilon \\
+\text{random action} & \text{with probability } \varepsilon
+\end{cases}
+\]
+
+The $\varepsilon$-greedy strategy is simple, but exploration rate doesn't adapt: it explores equally regardless of how much uncertainty remains.
+\end{definition}
+
+\begin{definition}[Hoeffding's Inequality]
+Let $X_1, \ldots, X_n$ be i.i.d. random variables in $[0, 1]$ with mean $\mu = \mathbb{E}[X]$. Let $\bar{X}_n = \frac{1}{n} \sum_i X_i$ be the sample mean. Then:
+\[
+P(\bar{X}_n - \mu > u) \leq e^{-2nu^2}
+\]
+
+This concentration bound shows that sample averages are unlikely to deviate far from their true mean with high probability.
+\end{definition}
+
+\begin{definition}[Upper Confidence Bound (UCB) Algorithm]
+The UCB algorithm selects actions based on both their estimated value and uncertainty:
+\[
+A_t = \arg\max_{a \in A} \left[ Q_t(a) + U_t(a) \right]
+\]
+
+where $U_t(a) = \sqrt{\frac{2 \log t}{N_t(a)}}$ is the confidence radius. Actions with:
+\begin{itemize}
+    \item High estimated value are preferred (exploitation)
+    \item High uncertainty are tried to reduce uncertainty (exploration)
+\end{itemize}
+
+UCB achieves logarithmic regret: $R_T = O(\log T)$, which is asymptotically optimal.
+\end{definition}
+
+\begin{definition}[Thompson Sampling]
+Thompson sampling maintains a posterior distribution over the value of each action and samples from these posteriors:
+
+\textbf{Algorithm:}
+\begin{itemize}
+    \item Maintain belief $p_t(Q(a))$ about each action value
+    \item Sample $\tilde{Q}_t(a) \sim p_t(Q(a))$ for each action
+    \item Select $A_t = \arg\max_a \tilde{Q}_t(a)$
+    \item After observing reward, update belief using Bayes' rule
+\end{itemize}
+
+Thompson sampling naturally balances exploration and exploitation by sampling from the posterior. It achieves logarithmic regret and is often more efficient than UCB in practice.
+\end{definition}
+
+\subsection{Optimism Under Uncertainty}
+
+\begin{remark}[Exploration-Exploitation Trade-off]
+When choosing actions, we balance:
+\begin{itemize}
+    \item \textbf{Exploitation}: Choose actions with high estimated value $\mu_a$
+    \item \textbf{Exploration}: Choose actions with high uncertainty $\sigma_a$ to reduce uncertainty
+\end{itemize}
+
+Both UCB and Thompson sampling implement the principle of \textit{optimism under uncertainty}: favor actions that could plausibly be optimal given current beliefs.
+\end{remark}
+
+\begin{theorem}[Lai and Robbins Lower Bound]
+No algorithm can achieve regret asymptotically better than:
+\[
+\lim_{T \to \infty} \frac{\mathbb{E}[R_T]}{\log T} \geq \sum_{a \neq a_*} \frac{\Delta_a}{\text{KL}(Q^*(a) || Q^*(a_*))}
+\]
+
+This shows that algorithms like UCB and Thompson sampling that achieve $O(\log T)$ regret are fundamentally optimal.
+\end{theorem}
+
+\section{Monte Carlo and Temporal Difference Learning}
+
+\subsection{Monte Carlo Methods}
+
+\begin{definition}[Monte Carlo Policy Evaluation]
+Monte Carlo estimation computes returns from complete episodes and averages them to estimate value functions:
+
+\textbf{Algorithm:}
+\begin{itemize}
+    \item Generate episodes under policy $\pi$: $S_0, A_0, R_1, S_1, A_1, R_2, \ldots, S_T$
+    \item For each state visited, compute the return: $G_t = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{T-t-1} R_T$
+    \item Update average: $V(S_t) \leftarrow \frac{1}{N} \sum_i G_t^{(i)}$
+\end{itemize}
+
+Advantages:
+\begin{itemize}
+    \item Returns are unbiased estimates of $V_\pi(S_t)$
+    \item Converges to true value even without knowing transition probabilities
+    \item No bootstrapping - doesn't use value estimates
+\end{itemize}
+
+Disadvantages:
+\begin{itemize}
+    \item Only works for episodic tasks
+    \item High variance: must wait for full episode to complete
+\end{itemize}
+\end{definition}
+
+\subsection{Temporal Difference Learning}
+
+\begin{definition}[Temporal Difference (TD) Learning]
+TD methods combine ideas from Monte Carlo and dynamic programming. Instead of waiting for complete returns, they use bootstrapping to update value estimates:
+
+\textbf{TD(0) Update Rule:}
+\[
+V(S_t) \leftarrow V(S_t) + \alpha [R_{t+1} + \gamma V(S_{t+1}) - V(S_t)]
+\]
+
+where $\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$ is the TD error.
+
+Advantages:
+\begin{itemize}
+    \item Low variance: uses value estimate bootstrapping
+    \item Incremental: learns from each transition
+    \item Works for continuing tasks
+\end{itemize}
+
+Disadvantages:
+\begin{itemize}
+    \item Biased estimate of $V_\pi(S_t)$ unless $V(S_{t+1})$ is accurate
+    \item Depends on accurate value estimates
+\end{itemize}
+\end{definition}
+
+\begin{remark}[MC vs TD Trade-off]
+\begin{itemize}
+    \item \textbf{MC}: Unbiased but high variance - converges more slowly
+    \item \textbf{TD}: Biased but low variance - often learns faster with finite data
+    \item \textbf{Batch learning difference}: With finite data, TD converges to maximum likelihood estimate of transition model, while MC minimizes error on observed returns
+\end{itemize}
+\end{remark}
+
+\subsection{n-Step Methods and Eligibility Traces}
+
+\begin{definition}[n-Step Returns]
+The n-step return generalizes between TD(0) and Monte Carlo:
+\[
+G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n V(S_{t+n})
+\]
+
+Values of $n$:
+\begin{itemize}
+    \item $n = 1$: One-step TD update
+    \item $n = \infty$: Pure Monte Carlo return (if episode ends)
+    \item $1 < n < \infty$: Intermediate estimates
+\end{itemize}
+
+The update becomes:
+\[
+V(S_t) \leftarrow V(S_t) + \alpha [G_t^{(n)} - V(S_t)]
+\]
+\end{definition}
+
+\begin{definition}[$\lambda$-Return and TD($\lambda$)]
+The $\lambda$-return is a weighted mixture of n-step returns, emphasizing shorter steps as $\lambda \to 0$ and longer steps as $\lambda \to 1$:
+\[
+G_t^\lambda = (1-\lambda) \sum_{n=1}^\infty \lambda^{n-1} G_t^{(n)}
+\]
+
+This can be rewritten as:
+\[
+G_t^\lambda = R_{t+1} + \gamma((1-\lambda) V(S_{t+1}) + \lambda G_{t+1}^\lambda)
+\]
+
+TD($\lambda$) uses the $\lambda$-return to update: $V(S_t) \leftarrow V(S_t) + \alpha[G_t^\lambda - V(S_t)]$
+\end{definition}
+
+\begin{definition}[Eligibility Traces]
+Eligibility traces provide an efficient way to implement TD($\lambda$) by replacing the $\lambda$-return with trace-based updates. Define the eligibility trace as:
+\[
+e_t(s) = \begin{cases}
+\gamma \lambda e_{t-1}(s) & \text{if } S_t \neq s \\
+\gamma \lambda e_{t-1}(s) + 1 & \text{if } S_t = s
+\end{cases}
+\]
+
+Then the update becomes:
+\[
+V(s) \leftarrow V(s) + \alpha \delta_t e_t(s) \quad \text{for all } s
+\]
+
+where $\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$ is the TD error. Traces decay over time, implementing the $\lambda$-return efficiently.
+\end{definition}
+
+\section{Control Algorithms: Model-Free RL}
+
+\subsection{On-Policy Control: SARSA}
+
+\begin{definition}[SARSA (State-Action-Reward-State-Action)]
+SARSA is an on-policy TD method that learns the value of the policy being followed:
+
+\textbf{Algorithm:}
+\[
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)]
+\]
+
+where $A_{t+1}$ is the action actually taken in the next step under the current policy.
+
+Properties:
+\begin{itemize}
+    \item On-policy: Learns the value of the exploration policy being followed
+    \item Uses the next action $A_{t+1}$ that was actually taken
+    \item Converges to optimal Q-values for the exploration policy, not the optimal policy
+\end{itemize}
+\end{definition}
+
+\subsection{Off-Policy Control: Q-Learning}
+
+\begin{definition}[Q-Learning]
+Q-learning is an off-policy TD method that learns the optimal action-value function regardless of which policy is being followed:
+
+\textbf{Algorithm:}
+\[
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a') - Q(S_t, A_t)]
+\]
+
+Key differences from SARSA:
+\begin{itemize}
+    \item Off-policy: Learns optimal policy $\pi^*$ while following exploration policy $\mu$
+    \item Uses the maximum next Q-value instead of the action actually taken
+    \item Learns the optimal value regardless of exploratory actions
+\end{itemize}
+
+Q-learning is widely used because it separates the exploration policy (for gathering data) from the target policy (being optimized).
+\end{definition}
+
+\begin{definition}[Double Q-Learning]
+Standard Q-learning can overestimate action values because it uses $\max_a Q(S_{t+1}, a)$, which may be an optimistic estimate when values are learned. Double Q-learning reduces this bias by decoupling action selection from evaluation:
+
+\textbf{Algorithm:}
+\[
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma Q(S_{t+1}, \arg\max_{a'} Q(S_{t+1}, a')) - Q(S_t, A_t)]
+\]
+
+Or, maintain two Q-networks $Q$ and $Q'$:
+\[
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma Q'(S_{t+1}, \arg\max_{a'} Q(S_{t+1}, a')) - Q(S_t, A_t)]
+\]
+
+This separates the actions selected (via $Q$) from those evaluated (via $Q'$), reducing overestimation bias.
+\end{definition}
+
+\subsection{Expected SARSA}
+
+\begin{definition}[Expected SARSA]
+Expected SARSA combines on-policy structure with off-policy bootstrap by taking the expectation over actions:
+
+\textbf{Algorithm:}
+\[
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \sum_{a'} \pi(a'|S_{t+1}) Q(S_{t+1}, a') - Q(S_t, A_t) \right]
+\]
+
+where $\pi$ is the target policy (often greedy, sometimes $\varepsilon$-greedy).
+
+This uses the expected value under the target policy rather than bootstrapping from a single next action, combining benefits of SARSA and Q-learning.
+\end{definition}
+
+\subsection{GLIE and Convergence}
+
+\begin{definition}[GLIE (Greedy in the Limit with Infinite Exploration)]
+A learning process is GLIE if:
+\begin{enumerate}
+    \item All state-action pairs are visited infinitely often: $\lim_{t \to \infty} N_t(s,a) = \infty$ for all $s, a$
+    \item The policy converges to greedy: $\lim_{t \to \infty} \pi_t(a | s) = \mathbb{1}_{a = \arg\max_a Q_t(s,a)}$
+\end{enumerate}
+
+Example: $\varepsilon$-greedy with $\varepsilon_t = \frac{1}{t}$ satisfies GLIE.
+
+\begin{theorem}
+If Q-learning is performed with:
+\begin{itemize}
+    \item GLIE exploration (e.g., $\varepsilon_t \to 0$ decay)
+    \item Decaying step sizes: $\sum_t \alpha_t = \infty$ and $\sum_t \alpha_t^2 < \infty$
+\end{itemize}
+
+Then Q-learning converges to $Q^*$ with probability 1.
+\end{theorem}
+\end{definition}
+
+\section{Function Approximation and Deep RL}
+
+\subsection{Linear Value Function Approximation}
+
+\begin{definition}[Linear Function Approximation]
+Instead of maintaining a table of values, we use a linear combination of features:
+\[
+\hat{V}_w(s) = \mathbf{w}^\top \mathbf{x}(s)
+\]
+
+where $\mathbf{x}(s) \in \mathbb{R}^m$ is a feature vector and $\mathbf{w} \in \mathbb{R}^m$ are the weights.
+
+\textbf{Gradient-Based Updates:}
+The gradient of the value function with respect to weights is:
+\[
+\nabla_w \hat{V}_w(s) = \mathbf{x}(s)
+\]
+
+For TD learning:
+\[
+\Delta w = \alpha \delta_t \mathbf{x}(S_t)
+\]
+
+where $\delta_t = R_{t+1} + \gamma \hat{V}_w(S_{t+1}) - \hat{V}_w(S_t)$ is the TD error.
+\end{definition}
+
+\begin{definition}[Coarse Coding]
+A simple feature representation using overlapping binary features:
+\[
+\mathbf{x}(s) = [\mathbb{1}_{s \in R_1}, \mathbb{1}_{s \in R_2}, \ldots, \mathbb{1}_{s \in R_m}]^\top
+\]
+
+where each group $R_i$ is a receptive field. If a state falls in a field, the corresponding feature is 1. This provides local generalization: similar states within the same field share weight updates.
+\end{definition}
+
+\subsection{Convergence of Approximation Methods}
+
+\begin{definition}[MC and TD Convergence with Function Approximation]
+With linear function approximation and decreasing step sizes, MC and TD learning converge:
+
+\textbf{MC convergence target:}
+\[
+w_* = \mathbb{E}[(V_\pi(S) - \mathbf{w}^\top \mathbf{x}(S))^2]^{-1} \mathbb{E}[V_\pi(S) \mathbf{x}(S)]
+\]
+
+Converges to minimize expected squared error on observed returns.
+
+\textbf{TD convergence target:}
+\[
+w_* = \mathbb{E}[\mathbf{x}(S)(\mathbf{x}(S) - \gamma \mathbf{x}(S'))^\top]^{-1} \mathbb{E}[\mathbf{x}(S) R_{t+1}]
+\]
+
+This is the fixed point of the TD algorithm, not necessarily the best fit to true values but a fixed point of the iterative process.
+\end{definition}
+
+\subsection{The Deadly Triad}
+
+\begin{definition}[The Deadly Triad]
+When three conditions occur together, RL algorithms can diverge:
+\begin{enumerate}
+    \item \textbf{Bootstrapping}: Using value estimates to update other value estimates
+    \item \textbf{Off-Policy Learning}: Learning the optimal policy while following a different exploration policy
+    \item \textbf{Function Approximation}: Using a parameterized function approximator instead of lookup tables
+\end{enumerate}
+
+Any two of these three can coexist safely, but all three together create instability. This is why:
+\begin{itemize}
+    \item Tabular Q-learning + bootstrapping + off-policy is stable
+    \item Tabular TD($\lambda$) + bootstrapping + on-policy is stable
+    \item DQN requires target networks and replay buffers to stabilize the combination
+\end{itemize}
+\end{definition}
+
+\subsection{Modern Stabilization Techniques}
+
+\begin{definition}[Experience Replay]
+Store transitions $(S_t, A_t, R_{t+1}, S_{t+1})$ in a replay buffer $\mathcal{D}$ and sample mini-batches uniformly at random for learning. This breaks temporal correlations and improves data efficiency.
+
+\textbf{Algorithm:}
+\begin{itemize}
+    \item Store every transition in buffer: $\mathcal{D} \leftarrow \mathcal{D} \cup \{(S_t, A_t, R_{t+1}, S_{t+1})\}$
+    \item Sample batch $B \sim \mathcal{D}$ uniformly
+    \item Update $Q$-network using batch: $L = \frac{1}{|B|} \sum_{i \in B} (R_i + \gamma \max_{a'} Q(S'_i, a') - Q(S_i, A_i))^2$
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Target Networks]
+Maintain a separate target network $Q'$ (with parameters $\theta'$) to compute target values, while updating the main network $Q$ (with parameters $\theta$). The target network is updated periodically by copying weights from the main network: $\theta' \leftarrow \theta$ every $C$ steps.
+
+\textbf{Update with target network:}
+\[
+y_i = R_{i+1} + \gamma \max_{a'} Q'(S'_i, a'; \theta')
+\]
+
+where the target value $y_i$ uses the old target network, reducing correlation between the target and the parameters being updated.
+\end{definition}
+
+\begin{definition}[Least Squares Temporal Difference (LSTD)]
+For batch learning with linear function approximation, LSTD solves for the exact TD fixed point:
+
+\[
+w_{\text{LSTD}} = \left( \sum_{t=0}^T \mathbf{x}_t(\mathbf{x}_t - \gamma \mathbf{x}_{t+1})^\top \right)^{-1} \sum_{t=0}^T \mathbf{x}_t R_{t+1}
+\]
+
+Define:
+\begin{itemize}
+    \item $A_t = \sum_{t=0}^T \mathbf{x}_t(\mathbf{x}_t - \gamma \mathbf{x}_{t+1})^\top$
+    \item $b_t = \sum_{t=0}^T \mathbf{x}_t R_{t+1}$
+\end{itemize}
+
+Then $w_{\text{LSTD}} = A_t^{-1} b_t$. These can be updated incrementally using matrix inversion lemmas.
+\end{definition}
+
+\section{Model-Based Reinforcement Learning}
+
+\subsection{Learning and Using Models}
+
+\begin{definition}[World Model]
+A model $\mathcal{M}$ approximates the environment dynamics:
+\[
+\mathcal{M}(s, a) \approx P(S' | s, a), \quad \mathcal{R}(s, a) \approx \mathbb{E}[R | s, a]
+\]
+
+The model can be:
+\begin{itemize}
+    \item \textbf{Deterministic}: Predicts single next state and reward
+    \item \textbf{Stochastic}: Predicts distribution over next states
+    \item \textbf{Tabular}: Stores explicit tables of transitions and rewards
+    \item \textbf{Parametric}: Uses function approximation (e.g., neural networks)
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Planning]
+Using a learned model to improve the value function and policy without interacting with the real environment. Key approaches:
+\begin{itemize}
+    \item \textbf{Value iteration}: Apply $V_{k+1} = T^* V_k$ using the model
+    \item \textbf{Policy iteration}: Alternate between policy evaluation and improvement using the model
+    \item \textbf{Trajectory sampling}: Generate simulated trajectories and apply model-free algorithms
+\end{itemize}
+\end{definition}
+
+\subsection{Dyna and Integrated Learning}
+
+\begin{definition}[Dyna-Q]
+Dyna-Q integrates learning and planning by combining:
+
+\textbf{Real Experience:}
+\begin{enumerate}
+    \item Execute action $a$ in environment, observe $r, s'$
+    \item Update Q-value: $Q(s, a) \leftarrow Q(s, a) + \alpha[r + \gamma \max_{a'} Q(s', a') - Q(s, a)]$
+    \item Update model: $\mathcal{M}(s, a) \rightarrow s', r$
+\end{enumerate}
+
+\textbf{Planning (using model):}
+\begin{enumerate}
+    \item Sample random state-action pair $(s, a)$ visited before
+    \item Simulate model: $s', r \sim \mathcal{M}(s, a)$
+    \item Update Q-value: $Q(s, a) \leftarrow Q(s, a) + \alpha[r + \gamma \max_{a'} Q(s', a') - Q(s, a)]$
+    \item Repeat $N$ times per environment interaction
+\end{enumerate}
+
+Dyna uses the large amount of cheap simulated experience to amplify learning from real interactions.
+\end{definition}
+
+\subsection{Monte Carlo Tree Search}
+
+\begin{definition}[Monte Carlo Tree Search (MCTS)]
+MCTS builds a partial search tree by repeatedly simulating episodes. Each iteration consists of four phases:
+
+\begin{enumerate}
+    \item \textbf{Selection}: Traverse tree from root using a tree policy (e.g., UCB) until reaching a leaf
+    \item \textbf{Expansion}: Expand tree by adding a child node
+    \item \textbf{Rollout}: Simulate trajectory from expanded node using default policy until episode end
+    \item \textbf{Backup}: Propagate return back through selected path, updating visit counts and values:
+    \[
+    Q(s, a) = \frac{\sum_{k=1}^{N} R^{(k)}(s, a) \mathbb{1}\{s, a \text{ visited in } k\}}{N(s, a)}
+    \]
+\end{enumerate}
+
+MCTS are state-of-the-art for many games (Go, Chess) without learning a value function. The tree grows adaptively based on promising actions.
+\end{definition}
+
+\section{Policy Gradient Methods}
+
+\subsection{Policy Parameterization and Gradient Theorem}
+
+\begin{definition}[Policy Parameterization]
+A policy can be parameterized by a vector $\theta$ of parameters:
+\[
+\pi_\theta(a|s) = \frac{e^{H_\theta(s, a)}}{\sum_b e^{H_\theta(s, b)}}
+\]
+
+\textbf{Softmax policy}: Shows the probability of each action. For continuous control:
+\[
+\pi_\theta(a|s) = \mathcal{N}(\mu_\theta(s), \sigma^2)
+\]
+
+where $\mu_\theta(s)$ is the mean action learned by the neural network.
+\end{definition}
+
+\begin{theorem}[Policy Gradient Theorem (Episodic)]
+For episodic tasks with episode returns, the policy gradient is:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{S_t \sim \pi, A_t \sim \pi} \left[ \nabla_\theta \log \pi_\theta(A_t|S_t) Q^{\pi_\theta}(S_t, A_t) \right]
+\]
+
+The policy gradient is proportional to the log-probability of actions weighted by their Q-values. Actions with positive advantage get higher probability; those with negative advantage get lower probability.
+\end{theorem}
+
+\begin{theorem}[Policy Gradient Theorem (Average Reward)]
+For continuing tasks with average reward, the gradient becomes:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{S_t \sim \mu_\pi, A_t \sim \pi} \left[ \nabla_\theta \log \pi_\theta(A_t|S_t) Q^{\pi_\theta}(S_t, A_t) \right]
+\]
+
+where $\mu_\pi(s)$ is the stationary state distribution under $\pi$.
+\end{theorem}
+
+\subsection{The REINFORCE Algorithm}
+
+\begin{definition}[REINFORCE]
+REINFORCE uses policy gradients to directly optimize the policy. The simplest form uses Monte Carlo returns:
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Generate episode under $\pi_\theta$: $S_0, A_0, R_1, \ldots, S_T$
+    \item For each step $t$, compute return: $G_t = \sum_{k=t}^{T-1} \gamma^{k-t} R_{k+1}$
+    \item Update policy: 
+    \[
+    \theta \leftarrow \theta + \alpha \nabla_\theta \log \pi_\theta(A_t|S_t) G_t
+    \]
+\end{enumerate}
+
+REINFORCE is simple but has high variance because each update uses only one return. Reductions include:
+\begin{itemize}
+    \item Baseline subtraction: Use $G_t - b(S_t)$ instead of just $G_t$
+    \item Advantage estimation: Use temporal difference advantages
+\end{itemize}
+\end{definition}
+
+\subsection{Actor-Critic Methods}
+
+\begin{definition}[Actor-Critic Architecture]
+Actor-critic methods maintain:
+\begin{itemize}
+    \item \textbf{Actor}: The policy $\pi_\theta(a|s)$ that selects actions
+    \item \textbf{Critic}: A value function $V_\phi(s)$ that estimates $V(s)$
+\end{itemize}
+
+The critic provides a baseline for policy gradient updates, reducing variance while maintaining unbiasedness (under TD($\lambda$) with $\lambda = 1$).
+\end{definition}
+
+\begin{definition}[Advantage Actor-Critic (A2C)]
+Uses advantage function $A(s, a) = Q(s, a) - V(s)$ for policy updates:
+
+\begin{itemize}
+    \item Critic TD error: $\delta_t = R_{t+1} + \gamma V(S_{t+1}) - V(S_t)$ approximates advantage
+    \item Actor update: $\theta \leftarrow \theta + \alpha \nabla_\theta \log \pi_\theta(A_t|S_t) \delta_t$
+    \item Critic update: $\phi \leftarrow \phi + \beta \delta_t \nabla_\phi V_\phi(S_t)$
+\end{itemize}
+
+The critic learns faster (one-step TD), while the actor uses the critic's estimates to guide policy updates. This significantly reduces variance compared to REINFORCE.
+\end{definition}
+
+\subsection{Trust Region and Deterministic Policy Gradients}
+
+\begin{definition}[Trust Regions]
+Policy updates should be conservative to avoid destabilizing the entire policy. One approach constrains the KL divergence between old and new policies:
+
+\[
+\text{maximize } J(\theta) \quad \text{subject to} \quad \text{KL}(\pi_{\text{old}} || \pi_\theta) \leq \delta
+\]
+
+This can be approximated with a penalty term in the objective, giving algorithms like PPO (Proximal Policy Optimization) which are robust and sample-efficient.
+\end{definition}
+
+\begin{definition}[Deterministic Policy Gradient]
+For continuous control, instead of sampling actions from a stochastic policy, use a deterministic policy $\mu_\theta(s)$ that outputs actions directly. The deterministic policy gradient is:
+
+\[
+\nabla_\theta J = \mathbb{E}_S [\nabla_a Q(S, a)|_{a=\mu_\theta(S)} \cdot \nabla_\theta \mu_\theta(S)]
+\]
+
+This decomposes into:
+\begin{itemize}
+    \item $\nabla_a Q(S, a)$: How to improve actions
+    \item $\nabla_\theta \mu_\theta(S)$: How to change the policy
+\end{itemize}
+
+Used in algorithms like Deep Deterministic Policy Gradient (DDPG). Works well when action space is mainly continuous.
+\end{definition}
+
+\section{Off-Policy Learning and Importance Sampling}
+
+\subsection{Importance Sampling Corrections}
+
+\begin{definition}[Off-Policy Learning]
+In off-policy learning, we learn the target policy $\pi$ while following a different behavior policy $\mu$. We need to correct for this distribution mismatch using importance sampling weights:
+
+\[
+\rho_t = \frac{\pi(A_t|S_t)}{\mu(A_t|S_t)}
+\]
+
+The importance sampling ratio tells us how much more likely the action was under the target policy vs the behavior policy.
+\end{definition}
+
+\begin{definition}[Per-Decision Importance Sampling]
+Instead of using full trajectory importance weights (which can explode), we can use per-decision importance sampling that limits corrections to individual steps:
+
+\textbf{Corrected Return:}
+\[
+G_t^c = \rho_t (R_{t+1} + \gamma (\rho_{t+1} G_{t+1}^c))
+\]
+
+This avoids the exponential blowup of full importance sampling by only correcting over visited actions.
+\end{definition}
+
+\subsection{Variance Reduction Techniques}
+
+\begin{definition}[Control Variates]
+Subtract a baseline function $b(S_t)$ from advantages to reduce variance without introducing bias:
+
+\[
+A_t = (R_{t+1} + \gamma V(S_{t+1}) - V(S_t)) - b(S_t) + b(S_t) = \delta_t
+\]
+
+The baseline should be highly correlated with returns to effectively reduce variance. Value function estimates are natural choices since they predict expected returns.
+\end{definition}
+
+\begin{definition}[Adaptive Bootstrapping]
+When importance sampling ratios $\rho_t$ are large, importance sampling has high variance. Adaptive bootstrapping clips the correction:
+
+\[
+\hat{A}_t = (1 - \lambda_t) \left[ R_{t+1} + \gamma V(S_{t+1}) \right] + \lambda_t \rho_t A_t
+\]
+
+where $\lambda_t = \min(1, 1/\rho_t)$. This transitions from bootstrapping when $\rho_t$ is large (high importance sampling variance) to importance sampling when $\rho_t$ is small.
+\end{definition}
+
+\subsection{Tree Backup and Retrace}
+
+\begin{definition}[Tree Backup]
+Tree backup is an off-policy algorithm that backs up values through expected targets:
+\[
+G_t = R_{t+1} + \gamma \left( \sum_{a'} \pi(a'|S_{t+1}) Q(S_{t+1}, a') \cdot \pi(A_{t+1}|S_{t+1}) \rho_{t+1} \right) + \gamma (1 - \pi(A_{t+1}|S_{t+1})) V(S_{t+1})
+\]
+
+This avoids the high variance of pure importance sampling while allowing off-policy learning.
+\end{definition}
+
+\section{Deep Reinforcement Learning}
+
+\subsection{Deep Q-Networks}
+
+\begin{definition}[DQN (Deep Q-Network)]
+Use a deep neural network to approximate the Q-function. The network takes state $s$ as input and outputs Q-values for all actions:
+\[
+Q_\theta(s, a) = \text{NeuralNetwork}_\theta(s)[a]
+\]
+
+This allows generalization across states and scales to complex state spaces. The basic DQN algorithm uses:
+\begin{itemize}
+    \item Experience replay: Store and sample transitions from a replay buffer
+    \item Target network: Separate network for computing target values, updated periodically
+    \item $\varepsilon$-greedy exploration
+\end{itemize}
+\end{definition}
+
+\subsection{Advanced DQN Methods}
+
+\begin{definition}[Prioritized Experience Replay (PER)]
+Instead of uniform sampling from the replay buffer, sample transitions proportionally to their TD error:
+\[
+\text{Priority}(i) = |\delta_i| + \varepsilon
+\]
+
+Transitions the agent has difficulty learning (large TD error) are replayed more often. This focuses learning on challenging examples while improving sample efficiency.
+\end{definition}
+
+\begin{definition}[Multi-Step Q-Learning in Deep RL]
+Instead of one-step bootstrapping, use n-step returns:
+\[
+G_t^{(n)} = R_{t+1} + \gamma R_{t+2} + \cdots + \gamma^{n-1} R_{t+n} + \gamma^n Q_\theta(S_{t+n}, \arg\max_a Q_\theta(S_{t+n}, a))
+\]
+
+This provides better-balanced targets than pure TD or pure MC, leveraging the first $n$ real transitions while bootstrapping thereafter.
+\end{definition}
+
+\begin{definition}[Distributional Reinforcement Learning]
+Instead of learning a single value estimate, learn the full distribution over returns. The Categorical DQN maintains atoms of the return distribution:
+
+\begin{itemize}
+    \item Support: $Z = \{z_1, z_2, \ldots, z_N\}$ equally spaced atoms
+    \item Probability: $p_\theta(s, a) = [p_1(s, a), \ldots, p_N(s, a)]$ probabilities for each atom
+    \item Value: $Q_\theta(s, a) = \sum_i p_i(s, a) z_i$
+\end{itemize}
+
+Learning the distribution provides richer information about uncertainty and can improve exploration and robustness.
+\end{definition}
+
+\subsection{Gaussian Policies for Continuous Control}
+
+\begin{definition}[Gaussian Policy]
+For continuous action spaces, use a Gaussian policy parameterized by mean and variance:
+\[
+A_t \sim \pi_\theta(\cdot | S_t) = \mathcal{N}(\mu_\theta(S_t), \sigma_\theta^2 I)
+\]
+
+The policy gradient for a Gaussian policy is:
+\[
+\nabla_\theta \log \pi_\theta(a|s) = \frac{1}{\sigma^2} (a - \mu_\theta(s)) \nabla_\theta \mu_\theta(s) - \frac{\sigma'_\theta(s)}{\sigma_\theta(s)}
+\]
+
+The variance (or log-variance) is often learned as well to explore effectively (high variance early in learning, decreasing as policy improves).
+\end{definition}
+
+\section{Final Remarks}
+
+These lecture notes have covered the major theoretical foundations and practical algorithms in reinforcement learning, from dynamic programming to deep neural network approximation. The field continues to evolve rapidly, with new algorithms combining these core ideas in novel ways. Understanding these fundamentals provides a strong foundation for continuing into more advanced topics and research.
+
+\end{document}
